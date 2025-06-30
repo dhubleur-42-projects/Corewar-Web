@@ -11,7 +11,7 @@ server.get('/', async () => {
 
 server.listen({ port: config.port }, (err, address) => {
 	if (err) {
-		console.error(err)
+		getLogger().error(`Error starting server: ${err.message}`, err)
 		process.exit(1)
 	}
 	getLogger().info(`Server listening at ${address}`)
