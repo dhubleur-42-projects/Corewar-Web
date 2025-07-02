@@ -42,3 +42,5 @@ Thumbs.db
 .github/instructions/nx.instructions.md
 
 .env
+
+postgres_data/
