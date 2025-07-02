@@ -14,6 +14,14 @@ class Logger {
 		this.level = level
 	}
 
+	public getKey(): string {
+		return this.key
+	}
+
+	public getLevel(): LoggerLevel {
+		return this.level
+	}
+
 	public log(level: LoggerLevel, ...args: any[]): void {
 		if (this.shouldLog(level)) {
 			const lightGrey = '\x1b[37m'
@@ -87,4 +95,17 @@ export function getLogger(): Logger {
 		)
 	}
 	return loggerInstance
+}
+
+export function getSubLogger(key: string): Logger {
+	if (!loggerInstance) {
+		throw new Error(
+			'Logger instance is not created. Use createLogger first.',
+		)
+	}
+	const subLogger = new Logger(
+		`${loggerInstance.getKey()}][${key}`,
+		loggerInstance.getLevel(),
+	)
+	return subLogger
 }
