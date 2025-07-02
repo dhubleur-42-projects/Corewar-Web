@@ -2,13 +2,35 @@ import Fastify from 'fastify'
 import config from './utils/config'
 import { createLogger, getLogger } from './utils/logger'
 import prismaPlugin from './plugins/prisma'
-import userRoutes from './routes/users'
+import authRoutes from './routes/auth'
+import jwtPlugin from '@fastify/jwt'
+import cookiePlugin from '@fastify/cookie'
 
 createLogger(config.loggerKey, config.loggerLevel)
 
 const app = Fastify()
+
+app.setErrorHandler((error, request, reply) => {
+	getLogger().error(
+		`Error in request ${request.method} ${request.url}`,
+		error,
+	)
+	reply.status(500).send({ error: 'Internal Server Error' })
+})
+
+app.register(jwtPlugin, {
+	secret: config.jwtSecret,
+})
+getLogger().debug('Registered JWT plugin')
+
+app.register(cookiePlugin)
+getLogger().debug('Registered cookie plugin')
+
 app.register(prismaPlugin)
-app.register(userRoutes, { prefix: '/users' })
+getLogger().debug('Registered Prisma plugin')
+
+app.register(authRoutes, { prefix: '/auth' })
+getLogger().debug('Registered auth routes')
 
 const start = async () => {
 	try {

@@ -78,6 +78,14 @@ const config = {
 		.get('LOGGER_LEVEL')
 		.default('INFO')
 		.asEnum(LoggerLevel),
+	apiClientId: envValues.get('42_API_CLIENT_ID').asString(),
+	apiClientSecret: envValues.get('42_API_CLIENT_SECRET').asString(),
+	frontUrl: envValues
+		.get('FRONT_URL')
+		.default('http://localhost:8080')
+		.asString(),
+	jwtSecret: envValues.get('JWT_SECRET').asString(),
+	jwtIssuer: envValues.get('JWT_ISSUER').asString(),
 }
 
 export default config
