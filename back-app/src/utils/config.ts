@@ -101,6 +101,16 @@ const config = {
 		.get('REMEMBER_ME_COOKIE_NAME')
 		.default('rememberMeToken')
 		.asString(),
+	cookieConfig: {
+		httpOnly: true,
+		sameSite: 'lax' as const,
+		secure: envValues.get('IS_PROD').default('false').asBoolean(),
+		...(envValues.get('IS_PROD').default('false').asBoolean()
+			? { domain: envValues.get('COOKIE_DOMAIN').asString() }
+			: {}),
+		path: '/',
+		withCredentials: true,
+	},
 }
 
 export default config

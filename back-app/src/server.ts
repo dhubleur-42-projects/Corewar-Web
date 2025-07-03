@@ -7,6 +7,7 @@ import jwtPlugin from '@fastify/jwt'
 import cookiePlugin from '@fastify/cookie'
 import authPlugin from './plugins/auth'
 import transactionPlugin from './plugins/transaction'
+import corsPlugin from '@fastify/cors'
 
 createLogger(config.loggerKey, config.loggerLevel)
 
@@ -18,6 +19,12 @@ app.setErrorHandler((error, request, reply) => {
 		error,
 	)
 	reply.status(500).send({ error: 'Internal Server Error' })
+})
+
+app.register(corsPlugin, {
+	origin: config.frontUrl,
+	methods: ['GET', 'POST', 'PUT', 'DELETE'],
+	credentials: true,
 })
 
 app.register(prismaPlugin)

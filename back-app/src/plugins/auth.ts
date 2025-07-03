@@ -96,17 +96,30 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 							Date.now() + config.rememberMeValidity * 1000,
 						),
 					},
+					include: {
+						user: {
+							select: {
+								id: true,
+								login: true,
+							},
+						},
+					},
 				})
 
 				reply.setCookie(
 					config.accessTokenCookieName,
 					fastify.jwt.sign(
-						{ userId: record.userId, issuer: config.jwtIssuer },
+						{
+							userId: rememberMe.user.id,
+							issuer: config.jwtIssuer,
+						},
 						{ expiresIn: `${config.accessTokenValidity}s` },
 					),
 					{
-						httpOnly: true,
-						sameSite: 'strict',
+						...config.cookieConfig,
+						expires: new Date(
+							Date.now() + config.accessTokenValidity * 1000,
+						),
 					},
 				)
 
@@ -117,11 +130,13 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 							rememberMeId: rememberMe.id,
 							issuer: config.jwtIssuer,
 						},
-						{ expiresIn: '30d' },
+						{ expiresIn: `${config.rememberMeValidity}s` },
 					),
 					{
-						httpOnly: true,
-						sameSite: 'strict',
+						...config.cookieConfig,
+						expires: new Date(
+							Date.now() + config.rememberMeValidity * 1000,
+						),
 					},
 				)
 
