@@ -6,6 +6,7 @@ import authRoutes from './routes/auth'
 import jwtPlugin from '@fastify/jwt'
 import cookiePlugin from '@fastify/cookie'
 import authPlugin from './plugins/auth'
+import transactionPlugin from './plugins/transaction'
 
 createLogger(config.loggerKey, config.loggerLevel)
 
@@ -19,6 +20,12 @@ app.setErrorHandler((error, request, reply) => {
 	reply.status(500).send({ error: 'Internal Server Error' })
 })
 
+app.register(prismaPlugin)
+getLogger().debug('Registered Prisma plugin')
+
+app.register(transactionPlugin)
+getLogger().debug('Registered Transaction plugin')
+
 app.register(jwtPlugin, {
 	secret: config.jwtSecret,
 })
@@ -26,9 +33,6 @@ getLogger().debug('Registered JWT plugin')
 
 app.register(cookiePlugin)
 getLogger().debug('Registered Cookie plugin')
-
-app.register(prismaPlugin)
-getLogger().debug('Registered Prisma plugin')
 
 app.register(authPlugin)
 getLogger().debug('Registered Auth plugin')

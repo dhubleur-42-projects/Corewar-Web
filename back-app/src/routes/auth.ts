@@ -18,25 +18,6 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 		})
 	})
 
-	const generateTokens = async (user: User) => {
-		const rememberMe = await fastify.prisma.rememberMe.create({
-			data: {
-				userId: user.id,
-				expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-			},
-		})
-		return {
-			accessToken: fastify.jwt.sign(
-				{ userId: user.id, issuer: config.jwtIssuer },
-				{ expiresIn: '1h' },
-			),
-			rememberMeToken: fastify.jwt.sign(
-				{ rememberMeId: rememberMe.id, issuer: config.jwtIssuer },
-				{ expiresIn: '30d' },
-			),
-		}
-	}
-
 	fastify.post('/callback', {
 		schema: {
 			body: {
@@ -47,7 +28,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				required: ['code'],
 			},
 		},
-		handler: async (request, reply) => {
+		handler: fastify.withTransaction(async (request, reply) => {
 			const { code } = request.body as { code: string }
 
 			const res = await fetch('https://api.intra.42.fr/oauth/token', {
@@ -104,13 +85,13 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 			}
 			logger.debug(`User authenticated from 42: ${login} (${id})`)
 
-			let user = await fastify.prisma.user.findUnique({
+			let user = await request.transaction.user.findUnique({
 				where: { remoteId: id },
 			})
 
 			if (user == null) {
 				logger.info(`Creating new user: ${login} (${id})`)
-				user = await fastify.prisma.user.create({
+				user = await request.transaction.user.create({
 					data: {
 						remoteId: id,
 						login,
@@ -118,16 +99,35 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				})
 			}
 
-			const tokens = await generateTokens(user)
+			const rememberMe = await request.transaction.rememberMe.create({
+				data: {
+					userId: user.id,
+					expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+				},
+			})
 
-			reply.setCookie('accessToken', tokens.accessToken, {
-				httpOnly: true,
-				sameSite: 'strict',
-			})
-			reply.setCookie('rememberMeToken', tokens.rememberMeToken, {
-				httpOnly: true,
-				sameSite: 'strict',
-			})
+			reply.setCookie(
+				'accessToken',
+				fastify.jwt.sign(
+					{ userId: user.id, issuer: config.jwtIssuer },
+					{ expiresIn: '1h' },
+				),
+				{
+					httpOnly: true,
+					sameSite: 'strict',
+				},
+			)
+			reply.setCookie(
+				'rememberMeToken',
+				fastify.jwt.sign(
+					{ rememberMeId: rememberMe.id, issuer: config.jwtIssuer },
+					{ expiresIn: '30d' },
+				),
+				{
+					httpOnly: true,
+					sameSite: 'strict',
+				},
+			)
 			reply.status(200).send({
 				message: 'Authentication successful',
 				user: {
@@ -135,16 +135,16 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 					login: user.login,
 				},
 			})
-		},
+		}),
 	})
 
 	fastify.get('/me', {
 		preHandler: fastify.authenticate,
-		handler: async (request, reply) => {
+		handler: fastify.withTransaction(async (request, reply) => {
 			reply.status(200).send({
 				id: request.userId,
 			})
-		},
+		}),
 	})
 }
 

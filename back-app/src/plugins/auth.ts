@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify'
 import fp from 'fastify-plugin'
 import config from '../utils/config'
+import { getLogger } from '../utils/logger'
 
 declare module 'fastify' {
 	interface FastifyRequest {
@@ -24,7 +25,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
 		if (accessToken != null) {
 			try {
-				const payload = await fastify.jwt.verify<{
+				const payload = fastify.jwt.verify<{
 					userId: string
 					issuer: string
 				}>(accessToken)
@@ -56,7 +57,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
 		if (rememberMeToken != null) {
 			try {
-				const payload = await fastify.jwt.verify<{
+				const payload = fastify.jwt.verify<{
 					rememberMeId: string
 					issuer: string
 				}>(rememberMeToken)
@@ -84,7 +85,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 				}
 
 				setTimeout(() => {
-					fastify.prisma.rememberMe.delete({
+					fastify.prisma!.rememberMe.delete({
 						where: { id: record.id },
 					})
 				}, 10_000)
@@ -128,6 +129,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 				request.userId = record.userId
 				return
 			} catch (err) {
+				getLogger().error(err)
 				return reply
 					.status(401)
 					.send({ error: 'Invalid rememberMeToken' })
