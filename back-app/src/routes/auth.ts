@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify'
-import { getSubLogger } from '../utils/logger'
+import { getLogger, getSubLogger } from '../utils/logger'
 import config from '../utils/config'
 import { User } from '@prisma/client'
 
@@ -134,6 +134,15 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 					id: user.id,
 					login: user.login,
 				},
+			})
+		},
+	})
+
+	fastify.get('/me', {
+		preHandler: fastify.authenticate,
+		handler: async (request, reply) => {
+			reply.status(200).send({
+				id: request.userId,
 			})
 		},
 	})

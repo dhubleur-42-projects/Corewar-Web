@@ -5,6 +5,7 @@ import prismaPlugin from './plugins/prisma'
 import authRoutes from './routes/auth'
 import jwtPlugin from '@fastify/jwt'
 import cookiePlugin from '@fastify/cookie'
+import authPlugin from './plugins/auth'
 
 createLogger(config.loggerKey, config.loggerLevel)
 
@@ -24,13 +25,16 @@ app.register(jwtPlugin, {
 getLogger().debug('Registered JWT plugin')
 
 app.register(cookiePlugin)
-getLogger().debug('Registered cookie plugin')
+getLogger().debug('Registered Cookie plugin')
 
 app.register(prismaPlugin)
 getLogger().debug('Registered Prisma plugin')
 
+app.register(authPlugin)
+getLogger().debug('Registered Auth plugin')
+
 app.register(authRoutes, { prefix: '/auth' })
-getLogger().debug('Registered auth routes')
+getLogger().debug('Registered /auth routes')
 
 const start = async () => {
 	try {
