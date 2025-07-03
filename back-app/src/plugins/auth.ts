@@ -1,7 +1,6 @@
 import { FastifyPluginAsync } from 'fastify'
 import fp from 'fastify-plugin'
 import config from '../utils/config'
-import { getLogger } from '../utils/logger'
 
 declare module 'fastify' {
 	interface FastifyRequest {
@@ -94,16 +93,16 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 					data: {
 						userId: record.userId,
 						expiresAt: new Date(
-							Date.now() + 30 * 24 * 60 * 60 * 1000,
-						), // 30 days
+							Date.now() + config.rememberMeValidity * 1000,
+						),
 					},
 				})
 
 				reply.setCookie(
-					'accessToken',
+					config.accessTokenCookieName,
 					fastify.jwt.sign(
 						{ userId: record.userId, issuer: config.jwtIssuer },
-						{ expiresIn: '1h' },
+						{ expiresIn: `${config.accessTokenValidity}s` },
 					),
 					{
 						httpOnly: true,
@@ -112,7 +111,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 				)
 
 				reply.setCookie(
-					'rememberMeToken',
+					config.rememberMeCookieName,
 					fastify.jwt.sign(
 						{
 							rememberMeId: rememberMe.id,
@@ -129,7 +128,6 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 				request.userId = record.userId
 				return
 			} catch (err) {
-				getLogger().error(err)
 				return reply
 					.status(401)
 					.send({ error: 'Invalid rememberMeToken' })

@@ -3,13 +3,12 @@ import 'dotenv/config'
 import { LoggerLevel } from './logger'
 
 class EnvValues {
-	get(key: string) {
-		let value = process.env[key]
+	get(key: string, val?: string) {
+		const value = val ?? process.env[key]
 
 		return {
 			default: (defaultValue: string) => {
-				value = value !== undefined ? value : defaultValue
-				return this.get(key)
+				return this.get(key, value ?? defaultValue)
 			},
 			asString: () => {
 				if (value === undefined) {
@@ -86,6 +85,22 @@ const config = {
 		.asString(),
 	jwtSecret: envValues.get('JWT_SECRET').asString(),
 	jwtIssuer: envValues.get('JWT_ISSUER').asString(),
+	accessTokenValidity: envValues
+		.get('ACCESS_TOKEN_VALIDITY_SEC')
+		.default('3600') // 1 hour
+		.asNumber(),
+	accessTokenCookieName: envValues
+		.get('ACCESS_TOKEN_COOKIE_NAME')
+		.default('accessToken')
+		.asString(),
+	rememberMeValidity: envValues
+		.get('REMEMBER_ME_VALIDITY_SEC')
+		.default('2592000') // 30 days
+		.asNumber(),
+	rememberMeCookieName: envValues
+		.get('REMEMBER_ME_COOKIE_NAME')
+		.default('rememberMeToken')
+		.asString(),
 }
 
 export default config

@@ -1,7 +1,7 @@
 import { FastifyPluginAsync } from 'fastify'
-import { getLogger, getSubLogger } from '../utils/logger'
-import config from '../utils/config'
-import { User } from '@prisma/client'
+import { getSubLogger } from '../../utils/logger'
+import config from '../../utils/config'
+import { callbackSchema } from './schemas'
 
 const authRoutes: FastifyPluginAsync = async (fastify) => {
 	const logger = getSubLogger('AUTH')
@@ -19,15 +19,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 	})
 
 	fastify.post('/callback', {
-		schema: {
-			body: {
-				type: 'object',
-				properties: {
-					code: { type: 'string' },
-				},
-				required: ['code'],
-			},
-		},
+		schema: callbackSchema,
 		handler: fastify.withTransaction(async (request, reply) => {
 			const { code } = request.body as { code: string }
 
@@ -57,7 +49,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 			const accessToken = data.access_token
 
 			if (accessToken == null) {
-				logger.error('No access token received', data)
+				logger.debug('No access token received', data)
 				reply.code(500).send({ error: 'Failed to authenticate' })
 				return
 			}
@@ -68,7 +60,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				},
 			})
 			if (!userRes.ok) {
-				logger.error('Failed to fetch user info', {
+				logger.debug('Failed to fetch user info', {
 					status: userRes.status,
 					statusText: userRes.statusText,
 				})
@@ -79,7 +71,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 			const { id, login } = await userRes.json()
 
 			if (id == null || login == null) {
-				logger.error('Invalid user info received', { id, login })
+				logger.debug('Invalid user info received', { id, login })
 				reply.code(500).send({ error: 'Invalid user info received' })
 				return
 			}
@@ -102,15 +94,17 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 			const rememberMe = await request.transaction.rememberMe.create({
 				data: {
 					userId: user.id,
-					expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+					expiresAt: new Date(
+						Date.now() + config.rememberMeValidity * 1000,
+					),
 				},
 			})
 
 			reply.setCookie(
-				'accessToken',
+				config.accessTokenCookieName,
 				fastify.jwt.sign(
 					{ userId: user.id, issuer: config.jwtIssuer },
-					{ expiresIn: '1h' },
+					{ expiresIn: `${config.accessTokenValidity}s` },
 				),
 				{
 					httpOnly: true,
@@ -118,10 +112,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				},
 			)
 			reply.setCookie(
-				'rememberMeToken',
+				config.rememberMeCookieName,
 				fastify.jwt.sign(
 					{ rememberMeId: rememberMe.id, issuer: config.jwtIssuer },
-					{ expiresIn: '30d' },
+					{ expiresIn: `${config.rememberMeValidity}s` },
 				),
 				{
 					httpOnly: true,
@@ -144,6 +138,21 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 			reply.status(200).send({
 				id: request.userId,
 			})
+		}),
+	})
+
+	fastify.post('/logout', {
+		preHandler: fastify.authenticate,
+		handler: fastify.withTransaction(async (request, reply) => {
+			const { userId } = request
+
+			await request.transaction.rememberMe.deleteMany({
+				where: { userId },
+			})
+
+			reply.clearCookie(config.accessTokenCookieName)
+			reply.clearCookie(config.rememberMeCookieName)
+			reply.status(200).send({ message: 'Logout successful' })
 		}),
 	})
 }

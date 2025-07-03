@@ -1,11 +1,12 @@
 class EnvValues {
-	get(key: string) {
+	get(key: string, val?: string) {
 		const viteKey = `VITE_${key}`
-		let value = import.meta.env[viteKey] as string | undefined
+		const value = val ?? (import.meta.env[viteKey] as string | undefined)
 
 		return {
-			default: (defaultValue: string) =>
-				(value = value !== undefined ? value : defaultValue),
+			default: (defaultValue: string) => {
+				return this.get(key, value ?? defaultValue)
+			},
 			asString: () => {
 				if (value === undefined) {
 					throw new Error(
@@ -43,6 +44,22 @@ class EnvValues {
 				throw new Error(
 					`The environment variable ${viteKey} must be a boolean (true or false).`,
 				)
+			},
+			asEnum: <T extends Record<string, any>>(enumType: T) => {
+				if (value === undefined) {
+					throw new Error(
+						`The environment variable ${key} is not defined.`,
+					)
+				}
+				const enumValues = Object.values(enumType)
+				if (!enumValues.includes(value)) {
+					throw new Error(
+						`The environment variable ${key} must be one of ${enumValues.join(
+							', ',
+						)}.`,
+					)
+				}
+				return value as T[keyof T]
 			},
 		}
 	}
