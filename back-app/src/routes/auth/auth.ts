@@ -168,7 +168,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 		handler: fastify.withTransaction(async (request, reply) => {
 			const { userId } = request
 
-			await fastify.prisma.rememberMe.deleteMany({
+			await request.transaction.rememberMe.deleteMany({
 				where: { userId },
 			})
 
