@@ -1,19 +1,13 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { fetchApi } from './queries'
+import { generateFetchApi } from './queries'
 
 interface AuthLinkResponse {
 	url: string
 }
 
-const fetchAuthLink = async (): Promise<AuthLinkResponse> => {
-	const response = await fetchApi('/auth', {
-		method: 'GET',
-	})
-	if (!response.ok) {
-		throw new Error('Failed to fetch auth link')
-	}
-	return response.json()
-}
+const fetchAuthLink = generateFetchApi<[], AuthLinkResponse>('/auth', {
+	method: 'GET',
+})
 
 export const useFetchAuthLink = () => {
 	return useQuery<AuthLinkResponse>({
@@ -29,18 +23,13 @@ interface ExchangeTokenResponse {
 	}
 }
 
-const exchangeCodeForToken = async (
-	code: string,
-): Promise<ExchangeTokenResponse> => {
-	const response = await fetchApi('/auth/callback', {
+const exchangeCodeForToken = generateFetchApi<[string], ExchangeTokenResponse>(
+	'/auth/callback',
+	(code) => ({
 		method: 'POST',
 		body: JSON.stringify({ code }),
-	})
-	if (!response.ok) {
-		throw new Error('Failed to exchange code for token')
-	}
-	return response.json()
-}
+	}),
+)
 
 export const useExchangeToken = () => {
 	return useMutation({
@@ -48,15 +37,9 @@ export const useExchangeToken = () => {
 	})
 }
 
-const fetchMe = async (): Promise<ExchangeTokenResponse> => {
-	const response = await fetchApi('/auth/me', {
-		method: 'GET',
-	})
-	if (!response.ok) {
-		throw new Error('Failed to fetch user data')
-	}
-	return response.json()
-}
+const fetchMe = generateFetchApi<[], ExchangeTokenResponse>('/auth/me', {
+	method: 'GET',
+})
 
 export const useFetchMe = () => {
 	return useQuery<ExchangeTokenResponse>({
@@ -67,14 +50,9 @@ export const useFetchMe = () => {
 	})
 }
 
-const logout = async (): Promise<void> => {
-	const response = await fetchApi('/auth/logout', {
-		method: 'POST',
-	})
-	if (!response.ok) {
-		throw new Error('Failed to logout')
-	}
-}
+const logout = generateFetchApi<[], void>('/auth/logout', {
+	method: 'POST',
+})
 
 export const useLogout = () => {
 	return useMutation({

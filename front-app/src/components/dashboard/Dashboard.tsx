@@ -69,19 +69,16 @@ function Dashboard() {
 		setUser,
 	])
 
-	const loguoutStore = useStore((state) => state.logout)
+	const logoutStore = useStore((state) => state.logout)
 	const { mutate: logoutMutate } = useLogout()
 
 	const handleLogout = useCallback(() => {
 		logoutMutate(undefined, {
 			onSuccess: () => {
-				loguoutStore()
-			},
-			onError: (error) => {
-				console.error('Logout failed:', error)
+				logoutStore()
 			},
 		})
-	}, [logoutMutate, loguoutStore])
+	}, [logoutMutate, logoutStore])
 
 	return (
 		<>
