@@ -39,10 +39,12 @@ function Login() {
 
 	const { isSuccess: fetchMeSuccess, data: fetchMeData } = useFetchMe()
 
-	if (fetchMeSuccess) {
-		setUser(fetchMeData.user)
-		navigate('/dashboard/home', { replace: true })
-	}
+	useEffect(() => {
+		if (fetchMeSuccess) {
+			setUser(fetchMeData.user)
+			navigate('/dashboard/home', { replace: true })
+		}
+	}, [fetchMeSuccess, fetchMeData, setUser, navigate])
 
 	const { isSuccess: authLinkSuccess, data: authLinkData } =
 		useFetchAuthLink()
