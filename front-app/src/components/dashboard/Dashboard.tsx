@@ -34,31 +34,43 @@ function Dashboard() {
 	const location = useLocation()
 	const translate = useTranslate()
 
-	const fetchMeQuery = useFetchMe()
+	const {
+		isLoading: fetchMeLoading,
+		isSuccess: fetchMeSuccess,
+		data: fetchMeData,
+	} = useFetchMe()
 
 	const user = useStore((state) => state.user)
 	const setUser = useStore((state) => state.setUser)
 
 	useEffect(() => {
 		if (user == null) {
-			if (fetchMeQuery.isLoading) {
+			if (fetchMeLoading) {
 				return
 			}
-			if (fetchMeQuery.isSuccess) {
-				setUser(fetchMeQuery.data.user)
+			if (fetchMeSuccess) {
+				setUser(fetchMeData.user)
 				return
 			}
 			navigate('/', {
 				replace: true,
 			})
 		}
-	}, [user, navigate, location, fetchMeQuery, setUser])
+	}, [
+		user,
+		navigate,
+		location,
+		fetchMeLoading,
+		fetchMeSuccess,
+		fetchMeData,
+		setUser,
+	])
 
 	const loguoutStore = useStore((state) => state.logout)
-	const { mutate } = useLogout()
+	const { mutate: logoutMutate } = useLogout()
 
 	const handleLogout = useCallback(() => {
-		mutate(undefined, {
+		logoutMutate(undefined, {
 			onSuccess: () => {
 				loguoutStore()
 			},
@@ -66,7 +78,7 @@ function Dashboard() {
 				console.error('Logout failed:', error)
 			},
 		})
-	}, [mutate, loguoutStore])
+	}, [logoutMutate, loguoutStore])
 
 	return (
 		<>

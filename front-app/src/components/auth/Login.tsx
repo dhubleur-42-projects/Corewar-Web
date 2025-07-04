@@ -30,19 +30,19 @@ function Login() {
 		}
 	}, [user, navigate])
 
-	const authLinkQuery = useFetchAuthLink()
+	const { isSuccess: authLinkSuccess, data: authLinkData } =
+		useFetchAuthLink()
 
 	const handleLogin = useCallback(() => {
-		const data = authLinkQuery.data!
-		window.location.href = data.url
-	}, [authLinkQuery])
+		window.location.href = authLinkData!.url
+	}, [authLinkData])
 
 	return (
 		<Container>
 			<Button
 				variant="contained"
 				onClick={handleLogin}
-				disabled={!authLinkQuery.isSuccess}
+				disabled={!authLinkSuccess}
 			>
 				{translate(i18n.login)}
 			</Button>

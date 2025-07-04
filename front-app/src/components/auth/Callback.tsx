@@ -16,7 +16,7 @@ function Callback() {
 	const [searchParams] = useSearchParams()
 	const navigate = useNavigate()
 
-	const { mutate } = useExchangeToken()
+	const { mutate: exchangeTokeMutate } = useExchangeToken()
 
 	const user = useStore((state) => state.user)
 	const setUser = useStore((state) => state.setUser)
@@ -31,7 +31,7 @@ function Callback() {
 	useEffect(() => {
 		const code = searchParams.get('code')
 		if (code != null) {
-			mutate(code, {
+			exchangeTokeMutate(code, {
 				onSuccess: (data) => {
 					setUser(data.user)
 					navigate('/dashboard/home', { replace: true })
@@ -44,7 +44,7 @@ function Callback() {
 		} else {
 			navigate('/', { replace: true })
 		}
-	}, [searchParams, navigate, mutate, setUser])
+	}, [searchParams, navigate, exchangeTokeMutate, setUser])
 
 	return (
 		<Container>
