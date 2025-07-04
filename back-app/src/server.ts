@@ -8,46 +8,57 @@ import cookiePlugin from '@fastify/cookie'
 import authPlugin from './plugins/auth'
 import transactionPlugin from './plugins/transaction'
 import corsPlugin from '@fastify/cors'
+import bullMqPlugin from './plugins/bullmq'
+import { initQueues } from './async/queues/queues'
+import { initJobs } from './async/jobs/jobs'
+;(async () => {
+	createLogger(config.loggerKey, config.loggerLevel)
 
-createLogger(config.loggerKey, config.loggerLevel)
+	const app = Fastify()
 
-const app = Fastify()
+	app.setErrorHandler((error, request, reply) => {
+		getLogger().error(
+			`Error in request ${request.method} ${request.url}`,
+			error,
+		)
+		reply.status(500).send({ error: 'Internal Server Error' })
+	})
 
-app.setErrorHandler((error, request, reply) => {
-	getLogger().error(
-		`Error in request ${request.method} ${request.url}`,
-		error,
-	)
-	reply.status(500).send({ error: 'Internal Server Error' })
-})
+	await app.register(corsPlugin, {
+		origin: config.frontUrl,
+		methods: ['GET', 'POST', 'PUT', 'DELETE'],
+		credentials: true,
+	})
 
-app.register(corsPlugin, {
-	origin: config.frontUrl,
-	methods: ['GET', 'POST', 'PUT', 'DELETE'],
-	credentials: true,
-})
+	await app.register(prismaPlugin)
+	getLogger().debug('Registered Prisma plugin')
 
-app.register(prismaPlugin)
-getLogger().debug('Registered Prisma plugin')
+	await app.register(transactionPlugin)
+	getLogger().debug('Registered Transaction plugin')
 
-app.register(transactionPlugin)
-getLogger().debug('Registered Transaction plugin')
+	await app.register(jwtPlugin, {
+		secret: config.jwtSecret,
+	})
+	getLogger().debug('Registered JWT plugin')
 
-app.register(jwtPlugin, {
-	secret: config.jwtSecret,
-})
-getLogger().debug('Registered JWT plugin')
+	await app.register(cookiePlugin)
+	getLogger().debug('Registered Cookie plugin')
 
-app.register(cookiePlugin)
-getLogger().debug('Registered Cookie plugin')
+	await app.register(authPlugin)
+	getLogger().debug('Registered Auth plugin')
 
-app.register(authPlugin)
-getLogger().debug('Registered Auth plugin')
+	await app.register(bullMqPlugin)
+	getLogger().debug('Registered BullMQ plugin')
 
-app.register(authRoutes, { prefix: '/auth' })
-getLogger().debug('Registered /auth routes')
+	initQueues(app)
+	getLogger().debug('Initialized Queues')
 
-const start = async () => {
+	await initJobs(app)
+	getLogger().debug('Initialized Jobs')
+
+	await app.register(authRoutes, { prefix: '/auth' })
+	getLogger().debug('Registered /auth routes')
+
 	try {
 		await app.listen({ port: 3000 })
 		getLogger().info(`Server listening on port ${config.port}`)
@@ -55,6 +66,4 @@ const start = async () => {
 		getLogger().error(`Error starting server`, err)
 		process.exit(1)
 	}
-}
-
-start()
+})()

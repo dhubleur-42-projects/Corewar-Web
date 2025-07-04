@@ -111,6 +111,9 @@ const config = {
 		path: '/',
 		withCredentials: true,
 	},
+	redisHost: envValues.get('REDIS_HOST').asString(),
+	redisPort: envValues.get('REDIS_PORT').default('6379').asNumber(),
+	redisPassword: envValues.get('REDIS_PASSWORD').asString(),
 }
 
 export default config

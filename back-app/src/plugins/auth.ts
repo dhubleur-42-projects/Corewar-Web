@@ -1,6 +1,7 @@
 import { FastifyPluginAsync } from 'fastify'
 import fp from 'fastify-plugin'
 import config from '../utils/config'
+import { addToRemoveUsedRememberMeQueue } from '../async/queues/removeUsedRememberMeQueue'
 
 declare module 'fastify' {
 	interface FastifyRequest {
@@ -87,12 +88,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 						.send({ error: 'RememberMe ID not found' })
 				}
 
-				setTimeout(() => {
-					// eslint-disable-next-line no-restricted-properties
-					fastify.prisma!.rememberMe.delete({
-						where: { id: record.id },
-					})
-				}, 10_000)
+				addToRemoveUsedRememberMeQueue(record.id)
 
 				// eslint-disable-next-line no-restricted-properties
 				const rememberMe = await fastify.prisma.rememberMe.create({
