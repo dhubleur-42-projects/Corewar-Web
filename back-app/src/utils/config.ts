@@ -48,7 +48,7 @@ class EnvValues {
 					`The environment variable ${key} must be a boolean (true or false).`,
 				)
 			},
-			asEnum: <T extends Record<string, any>>(enumType: T) => {
+			asEnum: <T extends Record<string, unknown>>(enumType: T) => {
 				if (value === undefined) {
 					throw new Error(
 						`The environment variable ${key} is not defined.`,

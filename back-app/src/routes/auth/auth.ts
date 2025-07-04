@@ -119,7 +119,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 			reply.setCookie(
 				config.rememberMeCookieName,
 				fastify.jwt.sign(
-					{ rememberMeId: rememberMe.id, issuer: config.jwtIssuer },
+					{
+						rememberMeId: rememberMe.id,
+						issuer: config.jwtIssuer,
+					},
 					{ expiresIn: `${config.rememberMeValidity}s` },
 				),
 				{

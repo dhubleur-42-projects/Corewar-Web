@@ -51,7 +51,9 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
 				request.userId = payload.userId
 				return
-			} catch (_) {}
+			} catch (_) {
+				// Ignore invalid accessToken to fallback to rememberMeToken
+			}
 		}
 
 		if (rememberMeToken != null) {
@@ -142,7 +144,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
 				request.userId = record.userId
 				return
-			} catch (err) {
+			} catch (_) {
 				return reply
 					.status(401)
 					.send({ error: 'Invalid rememberMeToken' })

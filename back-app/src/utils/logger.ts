@@ -22,7 +22,7 @@ class Logger {
 		return this.level
 	}
 
-	public log(level: LoggerLevel, ...args: any[]): void {
+	public log(level: LoggerLevel, ...args: unknown[]): void {
 		if (this.shouldLog(level)) {
 			const lightGrey = '\x1b[37m'
 			const cyan = '\x1b[36m'
@@ -59,19 +59,19 @@ class Logger {
 		return levels.indexOf(level) >= levels.indexOf(this.level)
 	}
 
-	public debug(...args: any[]): void {
+	public debug(...args: unknown[]): void {
 		this.log(LoggerLevel.DEBUG, ...args)
 	}
 
-	public info(...args: any[]): void {
+	public info(...args: unknown[]): void {
 		this.log(LoggerLevel.INFO, ...args)
 	}
 
-	public warn(...args: any[]): void {
+	public warn(...args: unknown[]): void {
 		this.log(LoggerLevel.WARN, ...args)
 	}
 
-	public error(...args: any[]): void {
+	public error(...args: unknown[]): void {
 		this.log(LoggerLevel.ERROR, ...args)
 	}
 }

@@ -1,28 +1,43 @@
 import fp from 'fastify-plugin'
-import { FastifyPluginAsync } from 'fastify'
+import { FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import { PrismaClient } from '@prisma/client'
+
+type TransactionClient = Omit<
+	PrismaClient,
+	'$connect' | '$disconnect' | '$on' | '$use' | '$extends' | '$transaction'
+>
+
+type TransactionRequest = FastifyRequest & {
+	transaction: TransactionClient
+}
 
 declare module 'fastify' {
 	interface FastifyInstance {
 		withTransaction: (
 			handler: (
-				request: FastifyRequest & { transaction: any },
+				request: TransactionRequest,
 				reply: FastifyReply,
-			) => Promise<any>,
-		) => (request: FastifyRequest, reply: FastifyReply) => Promise<any>
+			) => Promise<unknown>,
+		) => (
+			request: FastifyRequest & { prisma: PrismaClient },
+			reply: FastifyReply,
+		) => Promise<unknown>
 	}
 
 	interface FastifyRequest {
-		transaction?: PrismaClient
+		transaction?: TransactionClient
 	}
 }
 
 const transactionalPlugin: FastifyPluginAsync = async (fastify) => {
 	fastify.decorate('withTransaction', (handler) => {
-		return async (request: any, reply: any) => {
+		return async (
+			request: FastifyRequest & { prisma: PrismaClient },
+			reply: FastifyReply,
+		) => {
 			return fastify.prisma.$transaction(async (tx) => {
 				request.transaction = tx
-				return handler(request, reply)
+				return handler(request as TransactionRequest, reply)
 			})
 		}
 	})
