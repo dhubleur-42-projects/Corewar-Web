@@ -4,11 +4,13 @@ import { I18nProvider } from './common/utils/i18n'
 import Router from './common/routing/Router'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './common/queries/queries'
+import Head from './Head'
 
 function App() {
 	return (
 		<I18nProvider>
 			<QueryClientProvider client={queryClient}>
+				<Head />
 				<Router />
 			</QueryClientProvider>
 		</I18nProvider>
