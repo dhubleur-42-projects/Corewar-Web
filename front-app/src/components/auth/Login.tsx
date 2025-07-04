@@ -9,6 +9,9 @@ const i18n = defineI18n({
 	en: {
 		login: 'Login with 42',
 	},
+	fr: {
+		login: 'Se connecter avec 42',
+	},
 })
 
 const Container = styled('div')({

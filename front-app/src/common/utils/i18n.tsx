@@ -6,6 +6,7 @@ import React from 'react'
 
 export enum Language {
 	en = 'en',
+	fr = 'fr',
 }
 
 export interface I18nObject {
@@ -21,7 +22,7 @@ type AvailableKeys<I extends I18nObject> = {
 
 export interface I18nConfig<K extends I18nObject> {
 	en: K
-	fr?: { [key in keyof K]: K[key] }
+	fr: { [key in keyof K]: K[key] }
 }
 
 type FlatI18nObject = { [key: string]: string }
@@ -165,7 +166,7 @@ export function I18nProvider({ children }: I18nProviderProps) {
 		}
 	}, [])
 
-	const locale = 'en'
+	const locale = 'en' // TODO selectable
 
 	return (
 		<IntlProvider

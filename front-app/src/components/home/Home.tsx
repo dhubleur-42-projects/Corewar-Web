@@ -4,6 +4,9 @@ const i18n = defineI18n({
 	en: {
 		home: 'Home',
 	},
+	fr: {
+		home: 'Accueil',
+	},
 })
 
 function Home() {

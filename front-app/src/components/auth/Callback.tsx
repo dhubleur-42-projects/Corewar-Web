@@ -3,6 +3,16 @@ import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useExchangeToken } from '../../common/queries/useAuthQueries'
 import useStore from '../../common/store/store'
+import { defineI18n, useTranslate } from '../../common/utils/i18n'
+
+const i18n = defineI18n({
+	en: {
+		authInProgress: 'Processing authentication...',
+	},
+	fr: {
+		authInProgress: "Traitement de l'authentification...",
+	},
+})
 
 const Container = styled('div')({
 	display: 'flex',
@@ -15,6 +25,7 @@ const Container = styled('div')({
 function Callback() {
 	const [searchParams] = useSearchParams()
 	const navigate = useNavigate()
+	const translate = useTranslate()
 
 	const { mutate: exchangeTokeMutate } = useExchangeToken()
 
@@ -48,7 +59,7 @@ function Callback() {
 
 	return (
 		<Container>
-			<p>Processing authentication...</p>
+			<p>{translate(i18n.authInProgress)}</p>
 		</Container>
 	)
 }

@@ -9,6 +9,9 @@ const i18n = defineI18n({
 	en: {
 		logout: 'Logout',
 	},
+	fr: {
+		logout: 'Se déconnecter',
+	},
 })
 
 const Header = styled('div')({
