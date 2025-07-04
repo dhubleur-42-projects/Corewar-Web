@@ -1,8 +1,8 @@
 name: Push pipeline
 
 env:
-    PNPM_VERSION: '8'
-    NODE_VERSION: '20'
+    PNPM_VERSION: '10'
+    NODE_VERSION: '23'
 
 on:
     push:
