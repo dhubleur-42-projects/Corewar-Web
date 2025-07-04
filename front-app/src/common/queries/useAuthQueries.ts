@@ -66,3 +66,21 @@ export const useFetchMe = () => {
 		retry: false,
 	})
 }
+
+const logout = async (): Promise<void> => {
+	const response = await fetchApi('/auth/logout', {
+		method: 'POST',
+	})
+	if (!response.ok) {
+		throw new Error('Failed to logout')
+	}
+}
+
+export const useLogout = () => {
+	return useMutation({
+		mutationFn: logout,
+		onSuccess: () => {
+			window.location.href = '/'
+		},
+	})
+}

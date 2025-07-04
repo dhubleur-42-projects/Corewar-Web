@@ -23,78 +23,72 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 		handler: fastify.withTransaction(async (request, reply) => {
 			const { code } = request.body as { code: string }
 
-			// const res = await fetch('https://api.intra.42.fr/oauth/token', {
-			// 	method: 'POST',
-			// 	headers: {
-			// 		'Content-Type': 'application/x-www-form-urlencoded',
-			// 	},
-			// 	body: new URLSearchParams({
-			// 		client_id: config.apiClientId,
-			// 		client_secret: config.apiClientSecret,
-			// 		grant_type: 'authorization_code',
-			// 		redirect_uri: redirectUri,
-			// 		code,
-			// 	}),
-			// })
-			// if (!res.ok) {
-			// 	logger.error('Failed to exchange code for token', {
-			// 		status: res.status,
-			// 		statusText: res.statusText,
-			// 	})
-			// 	reply.code(500).send({ error: 'Failed to authenticate' })
-			// 	return
-			// }
+			const res = await fetch('https://api.intra.42.fr/oauth/token', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded',
+				},
+				body: new URLSearchParams({
+					client_id: config.apiClientId,
+					client_secret: config.apiClientSecret,
+					grant_type: 'authorization_code',
+					redirect_uri: redirectUri,
+					code,
+				}),
+			})
+			if (!res.ok) {
+				logger.error('Failed to exchange code for token', {
+					status: res.status,
+					statusText: res.statusText,
+				})
+				reply.code(500).send({ error: 'Failed to authenticate' })
+				return
+			}
 
-			// const data = await res.json()
-			// const accessToken = data.access_token
+			const data = await res.json()
+			const accessToken = data.access_token
 
-			// if (accessToken == null) {
-			// 	logger.debug('No access token received', data)
-			// 	reply.code(500).send({ error: 'Failed to authenticate' })
-			// 	return
-			// }
+			if (accessToken == null) {
+				logger.debug('No access token received', data)
+				reply.code(500).send({ error: 'Failed to authenticate' })
+				return
+			}
 
-			// const userRes = await fetch('https://api.intra.42.fr/v2/me', {
-			// 	headers: {
-			// 		Authorization: `Bearer ${accessToken}`,
-			// 	},
-			// })
-			// if (!userRes.ok) {
-			// 	logger.debug('Failed to fetch user info', {
-			// 		status: userRes.status,
-			// 		statusText: userRes.statusText,
-			// 	})
-			// 	reply.code(500).send({ error: 'Failed to fetch user info' })
-			// 	return
-			// }
+			const userRes = await fetch('https://api.intra.42.fr/v2/me', {
+				headers: {
+					Authorization: `Bearer ${accessToken}`,
+				},
+			})
+			if (!userRes.ok) {
+				logger.debug('Failed to fetch user info', {
+					status: userRes.status,
+					statusText: userRes.statusText,
+				})
+				reply.code(500).send({ error: 'Failed to fetch user info' })
+				return
+			}
 
-			// const { id, login } = await userRes.json()
+			const { id, login } = await userRes.json()
 
-			// if (id == null || login == null) {
-			// 	logger.debug('Invalid user info received', { id, login })
-			// 	reply.code(500).send({ error: 'Invalid user info received' })
-			// 	return
-			// }
-			// logger.debug(`User authenticated from 42: ${login} (${id})`)
+			if (id == null || login == null) {
+				logger.debug('Invalid user info received', { id, login })
+				reply.code(500).send({ error: 'Invalid user info received' })
+				return
+			}
+			logger.debug(`User authenticated from 42: ${login} (${id})`)
 
-			// let user = await request.transaction.user.findUnique({
-			// 	where: { remoteId: id },
-			// })
+			let user = await request.transaction.user.findUnique({
+				where: { remoteId: id },
+			})
 
-			// if (user == null) {
-			// 	logger.info(`Creating new user: ${login} (${id})`)
-			// 	user = await request.transaction.user.create({
-			// 		data: {
-			// 			remoteId: id,
-			// 			login,
-			// 		},
-			// 	})
-			// }
-
-			// TMP
-			const user = {
-				id: 'cmcmeefz00000yb4bvgljtg5f',
-				login: 'dhubleur',
+			if (user == null) {
+				logger.info(`Creating new user: ${login} (${id})`)
+				user = await request.transaction.user.create({
+					data: {
+						remoteId: id,
+						login,
+					},
+				})
 			}
 
 			const rememberMe = await request.transaction.rememberMe.create({

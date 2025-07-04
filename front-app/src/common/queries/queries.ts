@@ -6,9 +6,12 @@ export const queryClient = new QueryClient()
 export const fetchApi = (url: string, options?: RequestInit) => {
 	return fetch(`${config.apiUrl}${url}`, {
 		credentials: 'include',
-		headers: {
-			'Content-Type': 'application/json',
-		},
+		headers:
+			options?.body != null
+				? {
+						'Content-Type': 'application/json',
+				  }
+				: {},
 		...options,
 	})
 }
