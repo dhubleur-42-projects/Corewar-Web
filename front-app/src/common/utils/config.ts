@@ -69,14 +69,6 @@ const envValues = new EnvValues()
 
 const config = {
 	apiUrl: envValues.get('API_URL').asString(),
-	rememberMeCookieName: envValues
-		.get('REMEMBER_ME_COOKIE_NAME')
-		.default('rememberMeToken')
-		.asString(),
-	accessTokenCookieName: envValues
-		.get('ACCESS_TOKEN_COOKIE_NAME')
-		.default('accessToken')
-		.asString(),
 }
 
 export default config
