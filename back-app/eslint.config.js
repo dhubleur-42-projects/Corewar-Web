@@ -60,6 +60,12 @@ module.exports = defineConfig([
 					message:
 						'Use the Prisma client directly instead of accessing it through request.transaction.',
 				},
+				{
+					object: 'fastify',
+					property: 'prisma',
+					message:
+						'Use the Prisma client directly instead of accessing it through fastify.transaction.',
+				},
 			],
 		},
 	},
