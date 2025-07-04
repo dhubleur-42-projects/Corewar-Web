@@ -1,13 +1,10 @@
+import Language from './language'
 import { type ReactNode, useCallback, useEffect, useState } from 'react'
 import { IntlProvider, type PrimitiveType, useIntl } from 'react-intl'
 import { EventEmitter } from 'events'
 import { type FormatXMLElementFn } from 'intl-messageformat'
 import React from 'react'
-
-export enum Language {
-	en = 'en',
-	fr = 'fr',
-}
+import useStore from '../store/store'
 
 export interface I18nObject {
 	[key: string]: string | I18nObject
@@ -166,7 +163,7 @@ export function I18nProvider({ children }: I18nProviderProps) {
 		}
 	}, [])
 
-	const locale = 'en' // TODO selectable
+	const locale = useStore((state) => state.locale)
 
 	return (
 		<IntlProvider

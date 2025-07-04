@@ -1,3 +1,5 @@
+import Language from './language'
+
 class EnvValues {
 	get(key: string, val?: string) {
 		const viteKey = `VITE_${key}`
@@ -69,6 +71,11 @@ const envValues = new EnvValues()
 
 const config = {
 	apiUrl: envValues.get('API_URL').asString(),
+	localeKey: envValues.get('LOCALE_KEY').default('locale').asString(),
+	localeDefault: envValues
+		.get('LOCALE_DEFAULT')
+		.default('en')
+		.asEnum(Language),
 }
 
 export default config
