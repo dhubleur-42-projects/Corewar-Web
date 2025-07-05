@@ -89,7 +89,6 @@ function createJobsWorker(fastify: FastifyInstance) {
 				return
 			}
 			logger.debug(`Processing job ${typedJob.name}`)
-			// eslint-disable-next-line no-restricted-properties
 			fastify.prisma.$transaction(async (transaction) => {
 				await jobHandlersByName[typedJob.data.handlerName](transaction)
 			})

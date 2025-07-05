@@ -15,7 +15,6 @@ async function prismaPlugin(fastify: FastifyInstance) {
 
 	fastify.decorate('prisma', prisma)
 	fastify.addHook('onRequest', async (request) => {
-		// eslint-disable-next-line no-restricted-properties
 		request.prisma = prisma
 	})
 

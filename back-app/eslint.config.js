@@ -51,20 +51,24 @@ module.exports = defineConfig([
 			],
 
 			'import/order': 'off',
-
+		},
+	},
+	{
+		files: ['src/routes/**/*.ts'],
+		rules: {
 			'no-restricted-properties': [
 				'error',
 				{
 					object: 'request',
 					property: 'prisma',
 					message:
-						'Use the Prisma client directly instead of accessing it through request.transaction.',
+						'Use request.transaction instead of accessing Prisma client directly.',
 				},
 				{
 					object: 'fastify',
 					property: 'prisma',
 					message:
-						'Use the Prisma client directly instead of accessing it through fastify.transaction.',
+						'Use request.transaction instead of accessing Prisma client directly.',
 				},
 			],
 		},

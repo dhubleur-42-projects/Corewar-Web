@@ -34,7 +34,6 @@ export function createQueue<T>(
 
 	fastify.createWorker(name, async (job) => {
 		const typedJob = job as { data: T }
-		// eslint-disable-next-line no-restricted-properties
 		fastify.prisma.$transaction(async (transaction) => {
 			try {
 				await handler(typedJob.data, transaction)

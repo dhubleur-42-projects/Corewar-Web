@@ -43,7 +43,6 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 						.send({ error: 'Invalid accessToken issuer' })
 				}
 
-				// eslint-disable-next-line no-restricted-properties
 				const record = await fastify.prisma.user.findUnique({
 					where: { id: payload.userId },
 				})
@@ -78,7 +77,6 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 						.send({ error: 'Invalid rememberMeToken issuer' })
 				}
 
-				// eslint-disable-next-line no-restricted-properties
 				const record = await fastify.prisma.rememberMe.findUnique({
 					where: { id: payload.rememberMeId },
 				})
@@ -93,7 +91,6 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 					QueueName.REMOVE_USED_REMEMBER_ME,
 				)({ rememberMeId: record.id }, { delay: 1000 })
 
-				// eslint-disable-next-line no-restricted-properties
 				const rememberMe = await fastify.prisma.rememberMe.create({
 					data: {
 						userId: record.userId,

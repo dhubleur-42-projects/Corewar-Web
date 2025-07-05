@@ -35,7 +35,6 @@ const transactionalPlugin: FastifyPluginAsync = async (fastify) => {
 			request: FastifyRequest & { prisma: PrismaClient },
 			reply: FastifyReply,
 		) => {
-			// eslint-disable-next-line no-restricted-properties
 			return fastify.prisma.$transaction(async (tx) => {
 				request.transaction = tx
 				return handler(request as TransactionRequest, reply)
