@@ -8,9 +8,11 @@ import { defineI18n, useTranslate } from '../../common/utils/i18n'
 const i18n = defineI18n({
 	en: {
 		logout: 'Logout',
+		hello: 'Hello {name}',
 	},
 	fr: {
 		logout: 'Se déconnecter',
+		hello: 'Bonjour {{name}}',
 	},
 })
 
@@ -22,6 +24,7 @@ const Header = styled('div')({
 	flexDirection: 'row',
 	justifyContent: 'flex-end',
 	alignItems: 'center',
+	gap: 16,
 })
 
 const Content = styled('div')({
@@ -83,6 +86,7 @@ function Dashboard() {
 	return (
 		<>
 			<Header>
+				<p>{translate(i18n.hello, { name: user?.login })}</p>
 				<Button variant="contained" size="small" onClick={handleLogout}>
 					{translate(i18n.logout)}
 				</Button>
