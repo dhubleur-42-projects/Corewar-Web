@@ -1,0 +1,56 @@
+services:
+    prod_databse:
+        image: postgres:latest
+        container_name: prod_postgres
+        environment:
+            POSTGRES_USER: ${POSTGRES_USER}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+            POSTGRES_DB: ${POSTGRES_DB}
+        volumes:
+            - ./postgres_data:/var/lib/postgresql/data
+        restart: always
+        networks:
+            - prod
+
+    prod_redis:
+        image: redis:latest
+        container_name: prod_redis
+        environment:
+            REDIS_PASSWORD: ${REDIS_PASSWORD}
+        volumes:
+            - ./redis_data:/data
+        restart: always
+        networks:
+            - prod
+
+    prod_back:
+        build:
+            context: ..
+            dockerfile: back.Dockerfile
+        image: prod_back
+        container_name: prod_back
+        ports:
+            - '3000:3000'
+        depends_on:
+            - prod_databse
+            - prod_redis
+        restart: always
+        networks:
+            - prod
+        environment:
+            PORT: ${BACK_PORT}
+            LOGGER_KEY: ${BACK_LOGGER_KEY}
+            LOGGER_LEVEL: ${BACK_LOGGER_LEVEL}
+            42_API_CLIENT_ID: ${BACK_42_API_CLIENT_ID}
+            42_API_CLIENT_SECRET: ${BACK_42_API_CLIENT_SECRET}
+            FRONT_URL: ${BACK_FRONT_URL}
+            JWT_SECRET: ${BACK_JWT_SECRET}
+            JWT_ISSUER: ${BACK_JWT_ISSUER}
+            DATABASE_URL: ${BACK_DATABASE_URL}
+            REDIS_HOST: ${BACK_REDIS_HOST}
+            REDIS_PORT: ${BACK_REDIS_PORT}
+            REDIS_PASSWORD: ${BACK_REDIS_PASSWORD}
+
+networks:
+    prod:
+        driver: bridge

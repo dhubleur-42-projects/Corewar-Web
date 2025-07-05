@@ -16,7 +16,6 @@ RUN adduser --uid 999 appuser
 RUN mkdir -p /app
 COPY --from=builder --chown=appuser:appuser /app/dist /app/dist
 COPY --from=builder --chown=appuser:appuser /app/node_modules /app/node_modules
-COPY back-app/.env /app/.env
 
 WORKDIR /app
 
