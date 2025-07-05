@@ -1,21 +1,18 @@
-import { FastifyInstance } from 'fastify'
 import { getSubLogger } from '../../utils/logger'
+import { TransactionClient } from '../../plugins/transaction'
 
-async function expireRememberMeJob(fastify: FastifyInstance) {
+async function expireRememberMeJob(transaction: TransactionClient) {
 	const logger = getSubLogger('EXPIRE REMEMBER ME JOB')
-	// eslint-disable-next-line no-restricted-properties
-	await fastify.prisma.$transaction(async (prisma) => {
-		const res = await prisma.rememberMe.deleteMany({
-			where: {
-				expiresAt: {
-					lte: new Date(),
-				},
+	const res = await transaction.rememberMe.deleteMany({
+		where: {
+			expiresAt: {
+				lte: new Date(),
 			},
-		})
-		if (res.count > 0) {
-			logger.info(`Expired ${res.count} remember me tokens`)
-		}
+		},
 	})
+	if (res.count > 0) {
+		logger.info(`Expired ${res.count} remember me tokens`)
+	}
 }
 
 export default expireRememberMeJob

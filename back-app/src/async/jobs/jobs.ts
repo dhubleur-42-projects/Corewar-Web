@@ -2,8 +2,9 @@ import { Queue } from 'bullmq'
 import { FastifyInstance } from 'fastify'
 import expireRememberMeJob from './expireRememberMeJob'
 import { getSubLogger } from '../../utils/logger'
+import { TransactionClient } from '../../plugins/transaction'
 
-type jobHandler = (fastify: FastifyInstance) => Promise<void>
+type jobHandler = (transaction: TransactionClient) => Promise<void>
 
 interface JobsQueueData {
 	handlerName: string
@@ -83,8 +84,15 @@ function createJobsWorker(fastify: FastifyInstance) {
 			if (typedJob.data == null || typedJob.data.handlerName == null) {
 				return
 			}
+			if (!jobHandlersByName[typedJob.data.handlerName]) {
+				logger.error(`No handler found for job: ${typedJob.name}`)
+				return
+			}
 			logger.debug(`Processing job ${typedJob.name}`)
-			await jobHandlersByName[typedJob.data.handlerName](fastify)
+			// eslint-disable-next-line no-restricted-properties
+			fastify.prisma.$transaction(async (transaction) => {
+				await jobHandlersByName[typedJob.data.handlerName](transaction)
+			})
 			logger.debug(`Job processed successfully: ${typedJob.name}`)
 		} catch (error) {
 			logger.error(`Error processing job: ${typedJob.name}`, error)
