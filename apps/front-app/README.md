@@ -1,9 +1,5 @@
 # Front app
 
-## Installation
-
-Use `pnpm install` to install the dependencies
-
 ## Variables
 
 Copy the `.env.tpl` file to `.env` and fill in the required variables:

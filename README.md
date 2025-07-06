@@ -35,9 +35,20 @@ If you introduce features that require new linting rules, please make sure to up
 
 This project uses Volta to manage the Node.js and pnpm versions. If you don't have Volta installed, you can install it by following the instructions on the [Volta website](https://volta.sh/)
 
-This project is a "non managed" monorepo, meaning that each project is an independent pnpm project
+This project is a pnpm monorepo divided into two main folders:
 
-After installing Volta, you can setup each project by following their respective README files:
+-   `apps` for all the applications
+-   `libs` for internal shared libraries
+
+Please make sure to read the [libs README](./libs/README.md) file to understand how to use the shared libraries in your projects
+
+In order to install the project, you can run the following command in the root of the project:
+
+```bash
+pnpm install
+```
+
+In order to run the project, you can read projects' README files:
 
 -   [Front README](./apps/front-app/README.md)
 -   [Back README](./apps/back-app/README.md)

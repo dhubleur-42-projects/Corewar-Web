@@ -11,6 +11,7 @@ import corsPlugin from '@fastify/cors'
 import bullMqPlugin from './plugins/bullmq'
 import { initQueues } from './async/queues/queues'
 import { initJobs } from './async/jobs/jobs'
+import { common_log } from 'server-common'
 ;(async () => {
 	createLogger(config.loggerKey, config.loggerLevel)
 
@@ -66,4 +67,6 @@ import { initJobs } from './async/jobs/jobs'
 		getLogger().error(`Error starting server`, err)
 		process.exit(1)
 	}
+
+	common_log()
 })()

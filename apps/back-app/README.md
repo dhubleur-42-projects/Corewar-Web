@@ -1,9 +1,5 @@
 # Back app
 
-## Installation
-
-Use `pnpm install` to install the dependencies
-
 ## Data
 
 This app uses a PostgreSQL database and a Redis server
