@@ -8,10 +8,17 @@ import cookiePlugin from '@fastify/cookie'
 import authPlugin from './plugins/auth'
 import transactionPlugin from './plugins/transaction'
 import corsPlugin from '@fastify/cors'
-import bullMqPlugin from './plugins/bullmq'
 import { initQueues } from './async/queues/queues'
 import { initJobs } from './async/jobs/jobs'
-import { common_log } from 'server-common'
+import { RedisOptions } from 'bullmq'
+import { bullMqPlugin } from 'server-common'
+
+const connection: RedisOptions = {
+	host: config.redisHost,
+	port: config.redisPort,
+	password: config.redisPassword,
+}
+
 ;(async () => {
 	createLogger(config.loggerKey, config.loggerLevel)
 
@@ -48,7 +55,9 @@ import { common_log } from 'server-common'
 	await app.register(authPlugin)
 	getLogger().debug('Registered Auth plugin')
 
-	await app.register(bullMqPlugin)
+	await app.register(bullMqPlugin, {
+		redisOptions: connection,
+	})
 	getLogger().debug('Registered BullMQ plugin')
 
 	initQueues(app)
@@ -67,6 +76,4 @@ import { common_log } from 'server-common'
 		getLogger().error(`Error starting server`, err)
 		process.exit(1)
 	}
-
-	common_log()
 })()

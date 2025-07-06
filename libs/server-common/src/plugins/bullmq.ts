@@ -2,7 +2,6 @@ import fp from 'fastify-plugin'
 import { Queue, Worker, JobsOptions } from 'bullmq'
 import { FastifyPluginAsync } from 'fastify'
 import { RedisOptions } from 'ioredis'
-import config from '../utils/config'
 
 declare module 'fastify' {
 	interface FastifyInstance {
@@ -19,13 +18,10 @@ declare module 'fastify' {
 	}
 }
 
-const connection: RedisOptions = {
-	host: config.redisHost,
-	port: config.redisPort,
-	password: config.redisPassword,
-}
-
-const bullMqPlugin: FastifyPluginAsync = async (fastify) => {
+const bullMqPlugin: FastifyPluginAsync<{ redisOptions: RedisOptions }> = async (
+	fastify,
+	redisOptions,
+) => {
 	fastify.decorate('queues', new Map<string, Queue>())
 	fastify.decorate('workers', new Map<string, Worker>())
 
@@ -33,7 +29,7 @@ const bullMqPlugin: FastifyPluginAsync = async (fastify) => {
 		'createQueue',
 		<T = unknown>(name: string, defaultOpts?: JobsOptions): Queue<T> => {
 			const queue = new Queue<T>(name, {
-				connection,
+				connection: redisOptions,
 				defaultJobOptions: defaultOpts,
 			})
 			fastify.queues.set(name, queue)
@@ -47,7 +43,9 @@ const bullMqPlugin: FastifyPluginAsync = async (fastify) => {
 			name: string,
 			processor: (job: unknown) => Promise<unknown>,
 		): Worker<T> => {
-			const worker = new Worker<T>(name, processor, { connection })
+			const worker = new Worker<T>(name, processor, {
+				connection: redisOptions,
+			})
 			fastify.workers.set(name, worker)
 			return worker
 		},
