@@ -2,7 +2,7 @@ FROM node:23 as builder
 
 RUN npm install -g pnpm
 
-COPY back-app /app
+COPY ../back-app /app
 
 WORKDIR /app
 

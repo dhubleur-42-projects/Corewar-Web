@@ -25,7 +25,7 @@ services:
 
     prod_back:
         build:
-            context: ..
+            context: .
             dockerfile: back.Dockerfile
         image: prod_back
         container_name: prod_back
