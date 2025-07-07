@@ -12,6 +12,7 @@ import {
 	type QueueAdder,
 	type QueueHandler,
 } from './async/queues'
+import { type JobHandler, addJob } from './async/jobs'
 
 export {
 	EnvValues,
@@ -24,4 +25,6 @@ export {
 	getQueueAdder,
 	QueueAdder,
 	QueueHandler,
+	JobHandler,
+	addJob,
 }
