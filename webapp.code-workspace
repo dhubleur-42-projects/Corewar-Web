@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": ".",
+			"name": "📁 Root directory"
+		},
+		{
+			"path": "apps/back-app",
+			"name": "🖥 Back app"
+		},
+		{
+			"path": "apps/front-app",
+			"name": "📱 Front app"
+		},
+		{
+			"path": "libs/server-common",
+			"name": "📦 Server common lib"
+		}
+	]
+}
