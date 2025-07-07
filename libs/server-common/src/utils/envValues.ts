@@ -62,6 +62,19 @@ class EnvValues {
 				}
 				return value as T[keyof T]
 			},
+			asArray: <T>(separator = ',') => {
+				if (value === undefined) {
+					throw new Error(
+						`The environment variable ${key} is not defined.`,
+					)
+				}
+				if (typeof value !== 'string') {
+					throw new Error(
+						`The environment variable ${key} must be a string.`,
+					)
+				}
+				return value.split(separator).map((item) => item.trim()) as T[]
+			},
 		}
 	}
 }

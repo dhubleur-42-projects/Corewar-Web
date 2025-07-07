@@ -1,6 +1,6 @@
 import Fastify from 'fastify'
 import config from './utils/config'
-import { createLogger, getLogger } from 'server-common'
+import { createLogger, getLogger, jwksPlugin, jwksRoutes } from 'server-common'
 import prismaPlugin from './plugins/prisma'
 import authRoutes from './routes/auth/auth'
 import jwtPlugin from '@fastify/jwt'
@@ -47,6 +47,7 @@ const connection: RedisOptions = {
 	await app.register(jwtPlugin, {
 		secret: config.jwtSecret,
 		sign: {
+			algorithm: 'HS256',
 			iss: config.jwtIssuer,
 		},
 	})
@@ -68,6 +69,17 @@ const connection: RedisOptions = {
 
 	await initJobs(app)
 	getLogger().debug('Initialized Jobs')
+
+	await app.register(jwksPlugin, {
+		redisOptions: connection,
+		privateKeyValidityTime: config.privateKetValidityTime,
+		authorizedIssuers: config.authorizedIssuers,
+		issuer: config.jwtIssuer,
+	})
+	getLogger().debug('Registered JWKS plugin')
+
+	await app.register(jwksRoutes)
+	getLogger().debug('Registered JWKS routes')
 
 	await app.register(authRoutes, { prefix: '/auth' })
 	getLogger().debug('Registered /auth routes')

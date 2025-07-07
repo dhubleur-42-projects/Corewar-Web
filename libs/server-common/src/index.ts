@@ -13,6 +13,8 @@ import {
 	type QueueHandler,
 } from './async/queues'
 import { type JobHandler, addJob } from './async/jobs'
+import jwksPlugin from './plugins/jwks'
+import jwksRoutes from './routes/jwks'
 
 export {
 	EnvValues,
@@ -27,4 +29,6 @@ export {
 	QueueHandler,
 	JobHandler,
 	addJob,
+	jwksPlugin,
+	jwksRoutes,
 }
