@@ -42,7 +42,9 @@ You can configure other variables if you need to, but they are not required for 
 
 ## Development
 
-Use `pnpm migrate:deploy` to apply the database migrations. This will create the necessary tables in the PostgreSQL database
+Use `pnpm migrate:deploy` to apply the database migrations. This will create the necessary tables in the PostgreSQL database\
+
+Use `pnpm prisma:generate` to generate the Prisma client based on the current schema. This will create the necessary files in the `node_modules/@prisma/client` folder
 
 Use `pnpm dev` to start the development server. The app will be available at `http://localhost:3000` (or the port you set in the `.env` file)
 
