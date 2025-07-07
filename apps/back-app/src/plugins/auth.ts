@@ -27,19 +27,14 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 			try {
 				const payload = fastify.jwt.verify<{
 					userId: string
-					issuer: string
-				}>(accessToken)
+				}>(accessToken, {
+					allowedIss: config.jwtIssuer,
+				})
 
 				if (!payload.userId) {
 					return reply
 						.status(401)
 						.send({ error: 'Invalid accessToken payload' })
-				}
-
-				if (!payload.issuer || payload.issuer !== config.jwtIssuer) {
-					return reply
-						.status(401)
-						.send({ error: 'Invalid accessToken issuer' })
 				}
 
 				const record = await fastify.prisma.user.findUnique({
@@ -61,19 +56,14 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 			try {
 				const payload = fastify.jwt.verify<{
 					rememberMeId: string
-					issuer: string
-				}>(rememberMeToken)
+				}>(rememberMeToken, {
+					allowedIss: config.jwtIssuer,
+				})
 
 				if (!payload.rememberMeId) {
 					return reply
 						.status(401)
 						.send({ error: 'Invalid rememberMeToken payload' })
-				}
-
-				if (!payload.issuer || payload.issuer !== config.jwtIssuer) {
-					return reply
-						.status(401)
-						.send({ error: 'Invalid rememberMeToken issuer' })
 				}
 
 				const record = await fastify.prisma.rememberMe.findUnique({
@@ -107,10 +97,9 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
 				reply.setCookie(
 					config.accessTokenCookieName,
-					fastify.jwt.sign(
+					await reply.jwtSign(
 						{
 							userId: rememberMe.user.id,
-							issuer: config.jwtIssuer,
 						},
 						{ expiresIn: `${config.accessTokenValidity}s` },
 					),
@@ -124,10 +113,9 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 
 				reply.setCookie(
 					config.rememberMeCookieName,
-					fastify.jwt.sign(
+					await reply.jwtSign(
 						{
 							rememberMeId: rememberMe.id,
-							issuer: config.jwtIssuer,
 						},
 						{ expiresIn: `${config.rememberMeValidity}s` },
 					),

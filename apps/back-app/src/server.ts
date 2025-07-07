@@ -46,6 +46,9 @@ const connection: RedisOptions = {
 
 	await app.register(jwtPlugin, {
 		secret: config.jwtSecret,
+		sign: {
+			iss: config.jwtIssuer,
+		},
 	})
 	getLogger().debug('Registered JWT plugin')
 
