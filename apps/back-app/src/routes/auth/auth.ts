@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify'
-import { getSubLogger } from '../../utils/logger'
+import { getSubLogger } from 'server-common'
 import config from '../../utils/config'
 import { callbackSchema } from './schemas'
 

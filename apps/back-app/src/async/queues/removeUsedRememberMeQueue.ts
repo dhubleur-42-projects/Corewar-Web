@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify'
-import { getSubLogger } from '../../utils/logger'
+import { getSubLogger } from 'server-common'
 import { TransactionClient } from '../../plugins/transaction'
 import { createQueue, QueueName } from './queues'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'

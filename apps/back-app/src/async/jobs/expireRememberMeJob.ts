@@ -1,4 +1,4 @@
-import { getSubLogger } from '../../utils/logger'
+import { getSubLogger } from 'server-common'
 import { TransactionClient } from '../../plugins/transaction'
 
 async function expireRememberMeJob(transaction: TransactionClient) {

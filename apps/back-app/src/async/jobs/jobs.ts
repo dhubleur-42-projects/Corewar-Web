@@ -1,7 +1,7 @@
 import { Queue } from 'bullmq'
 import { FastifyInstance } from 'fastify'
 import expireRememberMeJob from './expireRememberMeJob'
-import { getSubLogger } from '../../utils/logger'
+import { getSubLogger } from 'server-common'
 import { TransactionClient } from '../../plugins/transaction'
 
 type jobHandler = (transaction: TransactionClient) => Promise<void>

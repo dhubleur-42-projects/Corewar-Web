@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import initUsedRememberMeQueue from './removeUsedRememberMeQueue'
 import { Job, JobsOptions, Queue } from 'bullmq'
-import { getSubLogger } from '../../utils/logger'
+import { getSubLogger } from 'server-common'
 import { TransactionClient } from '../../plugins/transaction'
 
 export enum QueueName {

@@ -1,6 +1,6 @@
 import 'dotenv/config'
 
-import { LoggerLevel } from './logger'
+import { LoggerLevel } from 'server-common'
 import { EnvValues } from 'server-common'
 
 const envValues = new EnvValues()

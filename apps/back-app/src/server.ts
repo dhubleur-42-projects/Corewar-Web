@@ -1,6 +1,6 @@
 import Fastify from 'fastify'
 import config from './utils/config'
-import { createLogger, getLogger } from './utils/logger'
+import { createLogger, getLogger } from 'server-common'
 import prismaPlugin from './plugins/prisma'
 import authRoutes from './routes/auth/auth'
 import jwtPlugin from '@fastify/jwt'
