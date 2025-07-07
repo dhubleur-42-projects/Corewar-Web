@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
-import { getSubLogger } from 'server-common'
+import { getQueueAdder, getSubLogger } from 'server-common'
 import { TransactionClient } from '../../plugins/transaction'
-import { createQueue, QueueName } from './queues'
+import { createTransactionalQueue, QueueName } from './queues'
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library'
 
 export interface RemoveUsedRememberMeQueueData {
@@ -9,7 +9,7 @@ export interface RemoveUsedRememberMeQueueData {
 }
 
 const initUsedRememberMeQueue = (fastify: FastifyInstance) => {
-	createQueue(
+	createTransactionalQueue(
 		fastify,
 		QueueName.REMOVE_USED_REMEMBER_ME,
 		{
@@ -44,6 +44,12 @@ const removeUsedRememeberMeHandler = async (
 		}
 		throw error
 	}
+}
+
+export async function addToRemoveUsedRememberMeQueue(rememberMeId: string) {
+	await getQueueAdder<RemoveUsedRememberMeQueueData>(
+		QueueName.REMOVE_USED_REMEMBER_ME,
+	)({ rememberMeId }, { delay: 1000 })
 }
 
 export default initUsedRememberMeQueue

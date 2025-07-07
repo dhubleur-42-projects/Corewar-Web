@@ -6,6 +6,12 @@ import {
 	getSubLogger,
 	LoggerLevel,
 } from './utils/logger'
+import {
+	createQueue,
+	getQueueAdder,
+	type QueueAdder,
+	type QueueHandler,
+} from './async/queues'
 
 export {
 	EnvValues,
@@ -14,4 +20,8 @@ export {
 	getLogger,
 	getSubLogger,
 	LoggerLevel,
+	createQueue,
+	getQueueAdder,
+	QueueAdder,
+	QueueHandler,
 }
