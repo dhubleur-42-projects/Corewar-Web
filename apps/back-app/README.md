@@ -18,7 +18,7 @@ This will start the PostgreSQL database and the Redis server in detached mode. T
 
 Copy the `.env.tpl` file to `.env` and fill in the required variables:
 
--   `LOGGER_KEY` The key for the logger service
+-   `LOGGER_KEY` The name used to identify the app in the logs, usually the name of the app (e.g. `back-app`)
 -   `42_API_CLIENT_ID` The client ID for the 42 API
 -   `42_API_CLIENT_SECRET` The client secret for the 42 API
 -   `JWT_SECRET` The secret used to sign JWT tokens that authenticate users on the API
@@ -42,7 +42,7 @@ You can configure other variables if you need to, but they are not required for 
 
 ## Development
 
-Use `pnpm migrate:deploy` to apply the database migrations. This will create the necessary tables in the PostgreSQL database\
+Use `pnpm migrate:deploy` to apply the database migrations. This will create the necessary tables in the PostgreSQL database
 
 Use `pnpm prisma:generate` to generate the Prisma client based on the current schema. This will create the necessary files in the `node_modules/@prisma/client` folder
 
