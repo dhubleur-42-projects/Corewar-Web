@@ -74,6 +74,7 @@ const connection: RedisOptions = {
 	await app.register(jwksPlugin, {
 		redisOptions: connection,
 		privateKeyValidityTime: config.privateKetValidityTime,
+		publicKeyValidityTime: config.privateKetValidityTime * 2,
 		authorizedIssuers: config.authorizedIssuers,
 		issuer: config.jwtIssuer,
 		redisPrefix: config.redisPrefix,

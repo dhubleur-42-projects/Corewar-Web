@@ -8,7 +8,7 @@ import * as jose from 'jose'
 declare module 'fastify' {
 	interface FastifyInstance {
 		verifyRsaToken<T>(token: string): Promise<T>
-		signRsaToken<T extends jose.JWTPayload>(payload: T): Promise<string>
+		signRsaToken<T extends jose.JWTPayload>(payload: T, expirationTime: number): Promise<string>
 		jwksStores: Record<string, jose.JWTVerifyGetKey>
 		jwksRedis: Redis
 		getRedisKey: (key: string) => string
@@ -33,13 +33,13 @@ export const jwksAlg = 'RS256'
 const jwksPlugin: FastifyPluginAsync<{
 	redisOptions: RedisOptions
 	privateKeyValidityTime: number
+	publicKeyValidityTime: number
 	authorizedIssuers?: string[]
 	issuer: string
 	redisPrefix: string
 }> = async (fastify, options) => {
-	const { redisOptions, privateKeyValidityTime, authorizedIssuers, issuer, redisPrefix } =
+	const { redisOptions, privateKeyValidityTime, publicKeyValidityTime, authorizedIssuers, issuer, redisPrefix } =
 		options
-	const publicKeyValidityTime = privateKeyValidityTime * 2
 	const redis = new Redis(redisOptions)
 
 	if (redis === null) {
@@ -100,7 +100,7 @@ const jwksPlugin: FastifyPluginAsync<{
 
 	fastify.decorate(
 		'signRsaToken',
-		async <T extends jose.JWTPayload>(payload: T): Promise<string> => {
+		async <T extends jose.JWTPayload>(payload: T, expirationTime: number): Promise<string> => {
 			const privateKeyData = JSON.parse(
 				(await fastify.jwksRedis.get(fastify.getRedisKey(privateKeyRedisKey))) || '{}',
 			) as Key
@@ -113,13 +113,13 @@ const jwksPlugin: FastifyPluginAsync<{
 					'Private key is invalid or expired, generating new key',
 				)
 				await generateKey()
-				return fastify.signRsaToken(payload)
+				return fastify.signRsaToken(payload, expirationTime)
 			}
 			const token = new jose.SignJWT(payload)
 				.setProtectedHeader({ alg: jwksAlg, kid: privateKeyData.kid })
 				.setIssuedAt()
 				.setExpirationTime(
-					Math.round((Date.now() + privateKeyValidityTime) / 1000),
+					Math.round((Date.now() + expirationTime) / 1000),
 				)
 				.setIssuer(issuer)
 				.sign(privateKeyData.key)
