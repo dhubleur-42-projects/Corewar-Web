@@ -61,6 +61,7 @@ const connection: RedisOptions = {
 
 	await app.register(bullMqPlugin, {
 		redisOptions: connection,
+		redisPrefix: config.redisPrefix,
 	})
 	getLogger().debug('Registered BullMQ plugin')
 
@@ -75,6 +76,7 @@ const connection: RedisOptions = {
 		privateKeyValidityTime: config.privateKetValidityTime,
 		authorizedIssuers: config.authorizedIssuers,
 		issuer: config.jwtIssuer,
+		redisPrefix: config.redisPrefix,
 	})
 	getLogger().debug('Registered JWKS plugin')
 

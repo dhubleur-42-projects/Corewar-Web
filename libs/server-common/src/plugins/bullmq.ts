@@ -18,10 +18,11 @@ declare module 'fastify' {
 	}
 }
 
-const bullMqPlugin: FastifyPluginAsync<{ redisOptions: RedisOptions }> = async (
+const bullMqPlugin: FastifyPluginAsync<{ redisOptions: RedisOptions, redisPrefix: string }> = async (
 	fastify,
-	redisOptions,
+	options
 ) => {
+	const { redisOptions, redisPrefix } = options
 	fastify.decorate('queues', new Map<string, Queue>())
 	fastify.decorate('workers', new Map<string, Worker>())
 
@@ -31,6 +32,7 @@ const bullMqPlugin: FastifyPluginAsync<{ redisOptions: RedisOptions }> = async (
 			const queue = new Queue<T>(name, {
 				connection: redisOptions,
 				defaultJobOptions: defaultOpts,
+				prefix: redisPrefix,
 			})
 			fastify.queues.set(name, queue)
 			return queue
@@ -45,6 +47,7 @@ const bullMqPlugin: FastifyPluginAsync<{ redisOptions: RedisOptions }> = async (
 		): Worker<T> => {
 			const worker = new Worker<T>(name, processor, {
 				connection: redisOptions,
+				prefix: redisPrefix,
 			})
 			fastify.workers.set(name, worker)
 			return worker

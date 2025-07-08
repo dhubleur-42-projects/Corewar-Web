@@ -11,6 +11,7 @@ declare module 'fastify' {
 		signRsaToken<T extends jose.JWTPayload>(payload: T): Promise<string>
 		jwksStores: Record<string, jose.JWTVerifyGetKey>
 		jwksRedis: Redis
+		getRedisKey: (key: string) => string
 	}
 }
 
@@ -34,8 +35,9 @@ const jwksPlugin: FastifyPluginAsync<{
 	privateKeyValidityTime: number
 	authorizedIssuers?: string[]
 	issuer: string
+	redisPrefix: string
 }> = async (fastify, options) => {
-	const { redisOptions, privateKeyValidityTime, authorizedIssuers, issuer } =
+	const { redisOptions, privateKeyValidityTime, authorizedIssuers, issuer, redisPrefix } =
 		options
 	const publicKeyValidityTime = privateKeyValidityTime * 2
 	const redis = new Redis(redisOptions)
@@ -43,6 +45,10 @@ const jwksPlugin: FastifyPluginAsync<{
 	if (redis === null) {
 		throw new Error('Redis connection failed')
 	}
+	
+	fastify.decorate('getRedisKey', (key: string) => {
+		return `${redisPrefix}:${key}`
+	})
 
 	fastify.decorate('jwksRedis', redis)
 
@@ -58,7 +64,7 @@ const jwksPlugin: FastifyPluginAsync<{
 		const kid = randomUUID().toString()
 
 		const currentKeys = JSON.parse(
-			(await fastify.jwksRedis.get(publicKeysRedisKey)) || '{"keys": []}',
+			(await fastify.jwksRedis.get(fastify.getRedisKey(publicKeysRedisKey))) || '{"keys": []}',
 		) as KeyStore
 
 		currentKeys.keys.push({
@@ -74,14 +80,14 @@ const jwksPlugin: FastifyPluginAsync<{
 		)
 
 		await fastify.jwksRedis.set(
-			publicKeysRedisKey,
+			fastify.getRedisKey(publicKeysRedisKey),
 			JSON.stringify(currentKeys),
 			'EX',
 			publicKeyValidityTime / 1000,
 		)
 
 		await fastify.jwksRedis.set(
-			privateKeyRedisKey,
+			fastify.getRedisKey(privateKeyRedisKey),
 			JSON.stringify({
 				key: privateKeyJwt,
 				validity: now + privateKeyValidityTime,
@@ -96,7 +102,7 @@ const jwksPlugin: FastifyPluginAsync<{
 		'signRsaToken',
 		async <T extends jose.JWTPayload>(payload: T): Promise<string> => {
 			const privateKeyData = JSON.parse(
-				(await fastify.jwksRedis.get(privateKeyRedisKey)) || '{}',
+				(await fastify.jwksRedis.get(fastify.getRedisKey(privateKeyRedisKey))) || '{}',
 			) as Key
 			if (
 				privateKeyData == null ||

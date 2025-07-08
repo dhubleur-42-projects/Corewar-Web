@@ -1,11 +1,20 @@
 import 'dotenv/config'
 
+interface EnvValuesFinalizer {
+	default: (defaultValue: string) => EnvValuesFinalizer
+		asString: () => string
+		asNumber: () => number
+		asBoolean: () => boolean
+		asEnum: <T extends Record<string, unknown>>(enumType: T) => T[keyof T]
+		asArray: <T>(separator?: string) => T[]
+}
+
 class EnvValues {
 	get(key: string, val?: string) {
 		const value = val ?? process.env[key]
 
 		return {
-			default: (defaultValue: string) => {
+			default: (defaultValue: string): EnvValuesFinalizer => {
 				return this.get(key, value ?? defaultValue)
 			},
 			asString: () => {
