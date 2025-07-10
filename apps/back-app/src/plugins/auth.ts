@@ -29,6 +29,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 					userId: string
 				}>(accessToken, {
 					allowedIss: config.jwtIssuer,
+					allowedAud: config.jwtIssuer,
 				})
 
 				if (!payload.userId) {
@@ -58,6 +59,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 					rememberMeId: string
 				}>(rememberMeToken, {
 					allowedIss: config.jwtIssuer,
+					allowedAud: config.jwtIssuer
 				})
 
 				if (!payload.rememberMeId) {

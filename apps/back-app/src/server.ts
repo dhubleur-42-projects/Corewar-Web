@@ -49,6 +49,7 @@ const connection: RedisOptions = {
 		sign: {
 			algorithm: 'HS256',
 			iss: config.jwtIssuer,
+			aud: config.jwtIssuer,
 		},
 	})
 	getLogger().debug('Registered JWT plugin')
@@ -78,6 +79,7 @@ const connection: RedisOptions = {
 		authorizedIssuers: config.authorizedIssuers,
 		issuer: config.jwtIssuer,
 		redisPrefix: config.redisPrefix,
+		aud: config.jwtIssuer,
 	})
 	getLogger().debug('Registered JWKS plugin')
 

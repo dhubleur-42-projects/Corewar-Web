@@ -8,7 +8,7 @@ import * as jose from 'jose'
 declare module 'fastify' {
 	interface FastifyInstance {
 		verifyRsaToken<T>(token: string): Promise<T>
-		signRsaToken<T extends jose.JWTPayload>(payload: T, expirationTime: number): Promise<string>
+		signRsaToken<T extends jose.JWTPayload>(payload: T, expirationTime: number, aud: string[] | string): Promise<string>
 		jwksStores: Record<string, jose.JWTVerifyGetKey>
 		jwksRedis: Redis
 		getRedisKey: (key: string) => string
@@ -37,8 +37,9 @@ const jwksPlugin: FastifyPluginAsync<{
 	authorizedIssuers?: string[]
 	issuer: string
 	redisPrefix: string
+	aud: string
 }> = async (fastify, options) => {
-	const { redisOptions, privateKeyValidityTime, publicKeyValidityTime, authorizedIssuers, issuer, redisPrefix } =
+	const { redisOptions, privateKeyValidityTime, publicKeyValidityTime, authorizedIssuers, issuer, redisPrefix, aud } =
 		options
 	const redis = new Redis(redisOptions)
 
@@ -100,7 +101,7 @@ const jwksPlugin: FastifyPluginAsync<{
 
 	fastify.decorate(
 		'signRsaToken',
-		async <T extends jose.JWTPayload>(payload: T, expirationTime: number): Promise<string> => {
+		async <T extends jose.JWTPayload>(payload: T, expirationTime: number, aud: string[] | string): Promise<string> => {
 			const privateKeyData = JSON.parse(
 				(await fastify.jwksRedis.get(fastify.getRedisKey(privateKeyRedisKey))) || '{}',
 			) as Key
@@ -113,7 +114,7 @@ const jwksPlugin: FastifyPluginAsync<{
 					'Private key is invalid or expired, generating new key',
 				)
 				await generateKey()
-				return fastify.signRsaToken(payload, expirationTime)
+				return fastify.signRsaToken(payload, expirationTime, aud)
 			}
 			const token = new jose.SignJWT(payload)
 				.setProtectedHeader({ alg: jwksAlg, kid: privateKeyData.kid })
@@ -121,6 +122,7 @@ const jwksPlugin: FastifyPluginAsync<{
 				.setExpirationTime(
 					Math.round((Date.now() + expirationTime) / 1000),
 				)
+				.setAudience(aud)
 				.setIssuer(issuer)
 				.sign(privateKeyData.key)
 
@@ -149,7 +151,9 @@ const jwksPlugin: FastifyPluginAsync<{
 			fastify.jwksStores[iss] = jwksStore
 		}
 
-		const { payload } = await jose.jwtVerify(token, jwksStore)
+		const { payload } = await jose.jwtVerify(token, jwksStore, {
+			audience: aud
+		})
 		return payload as T
 	})
 }
