@@ -8,3 +8,7 @@ onlyBuiltDependencies:
     - esbuild
     - msgpackr-extract
     - prisma
+
+syncInjectedDepsAfterScripts:
+    - build
+injectWorkspacePackages: true
