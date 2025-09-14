@@ -17,7 +17,7 @@ This will start the PostgreSQL database and the Redis server in detached mode. T
 ## Env variables
 
 Copy the `./envValues/.env.local` file to `./.env` and replace:
--   `{{42_API_CLIENT_ID}}` and `{{42_API_CLIENT_SECRET}}` with your 42 API credentials (the app should have `http://localhost:8080` as redirect URI for development)
+-   `{{API_CLIENT_ID}}` and `{{API_CLIENT_SECRET}}` with your 42 API credentials (the app should have `http://localhost:8080` as redirect URI for development)
 -   `{{JWT_SECRET}}` with a random string
 -   `{{POSTGRES_XXX}}` with your PostgreSQL database credentials (make sure they match the ones in the `./localdev/.env`)
 -   `{{REDIS_PASSWORD}}` with the password for the Redis server (make sure it matches the one in the `./localdev/.env`)
@@ -25,8 +25,8 @@ Copy the `./envValues/.env.local` file to `./.env` and replace:
 You can also configure other variables if you need to:
 
 -   `LOGGER_KEY` The name used to identify the app in the logs, usually the name of the app (e.g. `back-app`)
--   `42_API_CLIENT_ID` The client ID for the 42 API
--   `42_API_CLIENT_SECRET` The client secret for the 42 API
+-   `API_CLIENT_ID` The client ID for the 42 API
+-   `API_CLIENT_SECRET` The client secret for the 42 API
 -   `JWT_SECRET` The secret used to sign JWT tokens that authenticate users on the API
 -   `JWT_ISSUER` The app's url
 -	`AUTHORIZED_ISSUERS` A comma-separated list of authorized issuers for the JWT tokens

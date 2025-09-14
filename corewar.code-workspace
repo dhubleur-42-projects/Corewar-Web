@@ -15,6 +15,14 @@
 		{
 			"path": "libs/server-common",
 			"name": "📦 Server common lib"
+		},
+		{
+			"path": "infra",
+			"name": "🌐 Infra"
+		},
+		{
+			"path": ".github",
+			"name": "🐙 Github"
 		}
 	]
 }

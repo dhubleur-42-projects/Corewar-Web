@@ -1,7 +1,3 @@
-# Introduction
-
-This project is a template project to create web applications implementing an auth with the 42's school API
-
 ## Technologies
 
 ### Front

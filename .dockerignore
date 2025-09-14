@@ -4,3 +4,10 @@ localdev/
 .env
 .env.*
 Dockerfile
+infra/
+.git/
+.vscode/
+.dockerignore
+.gitignore
+*.code-workspace
+.github/

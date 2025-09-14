@@ -1,0 +1,25 @@
+name: MR Close
+
+on:
+    pull_request:
+        types: [closed]
+
+jobs:
+    delete-mr-namespace:
+        name: Delete MR Namespace
+
+        runs-on: ubuntu-24.04
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up Kubeconfig
+              uses: azure/setup-kubectl@v3
+              with:
+                  method: kubeconfig
+                  kubeconfig: ${{ secrets.KUBE_CONFIG_DATA }}
+
+            - name: Delete MR Namespace
+              run: |
+                  kubectl delete namespace corewar-mr-${{ github.event.pull_request.number }} --ignore-not-found

@@ -1,0 +1,191 @@
+name: MR Update
+
+env:
+    PNPM_VERSION: '10'
+    NODE_VERSION: '23'
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened]
+
+jobs:
+    lint-front-app:
+        name: Lint front-app
+
+        runs-on: ubuntu-24.04
+
+        defaults:
+            run:
+                working-directory: apps/front-app
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: ${{ env.PNPM_VERSION }}
+                  run_install: false
+
+            - name: Install Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: 'pnpm'
+
+            - name: Install dependencies
+              run: pnpm install
+
+            - name: Lint app
+              run: pnpm lint
+
+    lint-back-app:
+        name: Lint back-app
+
+        runs-on: ubuntu-24.04
+
+        defaults:
+            run:
+                working-directory: apps/back-app
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: ${{ env.PNPM_VERSION }}
+                  run_install: false
+
+            - name: Install Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: 'pnpm'
+
+            - name: Install dependencies
+              run: pnpm install
+
+            - name: Lint app
+              run: pnpm lint
+
+    lint-server-common:
+        name: Lint server-common
+
+        runs-on: ubuntu-24.04
+
+        defaults:
+            run:
+                working-directory: libs/server-common
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Install pnpm
+              uses: pnpm/action-setup@v4
+              with:
+                  version: ${{ env.PNPM_VERSION }}
+                  run_install: false
+
+            - name: Install Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: 'pnpm'
+
+            - name: Install dependencies
+              run: pnpm install
+
+            - name: Lint app
+              run: pnpm lint
+
+    build:
+        name: Build apps
+        needs:
+            - lint-front-app
+            - lint-back-app
+            - lint-server-common
+
+        runs-on: ubuntu-24.04
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Log in to Docker Hub
+              uses: docker/login-action@v3
+              with:
+                  username: ${{ secrets.DOCKER_USERNAME }}
+                  password: ${{ secrets.DOCKER_PASSWORD }}
+
+            - name: Build and push back-app image
+              id: push
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./
+                  file: ./Dockerfile
+                  push: true
+                  target: back-app
+                  platforms: linux/amd64
+                  tags: |
+                      onorahubleur/corewar-back-app:mr-${{ github.event.pull_request.number }}
+
+            - name: Build and push front-app image
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./
+                  file: ./Dockerfile
+                  push: true
+                  target: front-app
+                  platforms: linux/amd64
+                  build-args: |
+                      VITE_API_URL=https://mr${{ github.event.pull_request.number }}-corewar-api.ozyria.fr
+                  tags: |
+                      onorahubleur/corewar-front-app:mr-${{ github.event.pull_request.number }}
+
+    deploy:
+        name: Deploy to Kubernetes
+        needs: build
+        runs-on: ubuntu-24.04
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up Kubeconfig
+              uses: azure/setup-kubectl@v3
+              with:
+                  method: kubeconfig
+                  kubeconfig: ${{ secrets.KUBE_CONFIG_DATA }}
+
+            - name: Create API credentials files
+              run: |
+                  echo "${{ secrets.API_CERT }}" > /tmp/ozyria.crt
+                  echo "${{ secrets.API_KEY }}" > /tmp/ozyria.key
+
+            - name: Deploy to Kubernetes
+              run: |
+                  ./infra/deploy-mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} /tmp/ozyria.crt /tmp/ozyria.key
+
+            - name: Clean up API credentials files
+              run: |
+                  rm -f /tmp/ozyria.crt /tmp/ozyria.key /tmp/back-app.env
+    comment-pr:
+        name: Comment PR with deployment info
+        needs: deploy
+        runs-on: ubuntu-24.04
+        steps:
+            - name: Post comment
+              uses: marocchino/sticky-pull-request-comment@v2
+              with:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  header: '🚀 Deployment Info'
+                  message: |
+                      The MR has been deployed to a temporary environment for testing
+
+                      - Frontend: `https://mr${{ github.event.pull_request.number }}-corewar.ozyria.fr`
+                      - Backend: `https://mr${{ github.event.pull_request.number }}-corewar-api.ozyria.fr`
+
+                      > Note: The environment will be automatically deleted when the MR is closed
