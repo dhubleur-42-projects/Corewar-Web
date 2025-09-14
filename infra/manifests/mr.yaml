@@ -140,6 +140,11 @@ spec:
     matchLabels:
       app: back-app
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   template:
     metadata:
       labels:
@@ -154,6 +159,12 @@ spec:
           envFrom:
             - configMapRef:
                 name: back-app-config
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 2
+            periodSeconds: 5
 
 ---
 # create back-app service
@@ -182,6 +193,11 @@ spec:
     matchLabels:
       app: front-app
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   template:
     metadata:
       labels:
@@ -193,6 +209,12 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 2
+            periodSeconds: 5
 
 ---
 # create front-app service

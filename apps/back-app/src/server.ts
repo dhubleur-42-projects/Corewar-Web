@@ -89,6 +89,11 @@ const connection: RedisOptions = {
 	await app.register(authRoutes, { prefix: '/auth' })
 	getLogger().debug('Registered /auth routes')
 
+	app.get('/health', async () => {
+		return { status: 'ok' }
+	})
+	getLogger().debug('Registered /health route')
+
 	try {
 		await app.listen({ port: 3000, host: '0.0.0.0' })
 		getLogger().info(`Server listening on port ${config.port}`)
