@@ -27,7 +27,7 @@ sed -i "s/{{REDIS_PASSWORD}}/${REDIS_PASSWORD}/g" /tmp/back-app.env
 sed -i "s/{{JWT_SECRET}}/${JWT_SECRET}/g" /tmp/back-app.env
 
 kubectl create namespace corewar-mr-${MR_ID} --insecure-skip-tls-verify || true
-kubectl create configmap back-app-config --from-env-file=/tmp/back-app.env -n corewar-mr-${MR_ID} --insecure-skip-tls-verify || true
+kubectl create configmap back-app-config --from-env-file=/tmp/back-app.env -n corewar-mr-${MR_ID} --insecure-skip-tls-verify --dry-run=client -o yaml | kubectl apply --insecure-skip-tls-verify -f -
 
 POSTGRES_PASSWORD_BASE64=$(echo -n $POSTGRES_PASSWORD | base64)
 REDIS_PASSWORD_BASE64=$(echo -n $REDIS_PASSWORD | base64)
