@@ -154,24 +154,15 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Set up Kubeconfig
-              uses: azure/setup-kubectl@v3
-              with:
-                  method: kubeconfig
-                  kubeconfig: ${{ secrets.KUBE_CONFIG_DATA }}
-
-            - name: Create API credentials files
+            - name: Set up kubeconfig
               run: |
-                  echo "${{ secrets.API_CERT }}" > /tmp/ozyria.crt
-                  echo "${{ secrets.API_KEY }}" > /tmp/ozyria.key
+                mkdir -p ~/.kube
+                echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
 
-            - name: Deploy to Kubernetes
+            - name: Deploy
               run: |
-                  ./infra/deploy_mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} /tmp/ozyria.crt /tmp/ozyria.key
+                  ./infra/deploy_mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ secrets.TLS_CERT }} ${{ secrets.TLS_KEY }}
 
-            - name: Clean up API credentials files
-              run: |
-                  rm -f /tmp/ozyria.crt /tmp/ozyria.key /tmp/back-app.env
     comment-pr:
         name: Comment PR with deployment info
         needs: deploy

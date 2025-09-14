@@ -14,12 +14,11 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Set up Kubeconfig
-              uses: azure/setup-kubectl@v3
-              with:
-                  method: kubeconfig
-                  kubeconfig: ${{ secrets.KUBE_CONFIG_DATA }}
+            - name: Set up kubeconfig
+              run: |
+                mkdir -p ~/.kube
+                echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
 
             - name: Delete MR Namespace
               run: |
-                  kubectl delete namespace corewar-mr-${{ github.event.pull_request.number }} --ignore-not-found
+                  kubectl delete namespace corewar-mr-${{ github.event.pull_request.number }} --ignore-not-found --insecure-skip-tls-verify
