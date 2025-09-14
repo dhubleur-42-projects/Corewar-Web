@@ -1,7 +1,7 @@
 name: MR Update
 
 env:
-    PNPM_VERSION: '10'
+    PNPM_VERSION: '10.12.4'
     NODE_VERSION: '23'
 
 on:
