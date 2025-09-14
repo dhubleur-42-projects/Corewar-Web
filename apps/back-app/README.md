@@ -14,9 +14,15 @@ docker compose -f ./localdev/docker-compose.yml up -d
 
 This will start the PostgreSQL database and the Redis server in detached mode. The database will be available at `localhost:5432` and the Redis server at `localhost:6379` by default
 
-## Variables
+## Env variables
 
-Copy the `.env.tpl` file to `.env` and fill in the required variables:
+Copy the `./envValues/.env.local` file to `./.env` and replace:
+-   `{{42_API_CLIENT_ID}}` and `{{42_API_CLIENT_SECRET}}` with your 42 API credentials (the app should have `http://localhost:8080` as redirect URI for development)
+-   `{{JWT_SECRET}}` with a random string
+-   `{{POSTGRES_XXX}}` with your PostgreSQL database credentials (make sure they match the ones in the `./localdev/.env`)
+-   `{{REDIS_PASSWORD}}` with the password for the Redis server (make sure it matches the one in the `./localdev/.env`)
+
+You can also configure other variables if you need to:
 
 -   `LOGGER_KEY` The name used to identify the app in the logs, usually the name of the app (e.g. `back-app`)
 -   `42_API_CLIENT_ID` The client ID for the 42 API
@@ -27,9 +33,6 @@ Copy the `.env.tpl` file to `.env` and fill in the required variables:
 -   `DATABASE_URL` The URL for the PostgreSQL database, in the format `postgresql://USER:PASSWORD@HOST:PORT/DATABASE`
 -   `REDIS_HOST` The host for the Redis server, usually `localhost`
 -   `REDIS_PASSWORD` The password for the Redis server
-
-You can configure other variables if you need to, but they are not required for the app to work:
-
 -   `PORT` The port on which the app will run, default is `3000`
 -   `LOGGER_LEVEL` The logging level for the app, default is `INFO` (can be `DEBUG`, `INFO`, `WARN`, `ERROR`, in development mode, `DEBUG` is recommended)
 -   `FRONT_URL` The URL of the front app, default is `http://localhost:8080`

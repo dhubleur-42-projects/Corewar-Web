@@ -1,5 +1,6 @@
 node_modules/
 dist/
 localdev/
-.env*
+.env
+.env.*
 Dockerfile

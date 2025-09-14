@@ -1,13 +1,11 @@
 # Front app
 
-## Variables
+## Env variables
 
-Copy the `.env.tpl` file to `.env` and fill in the required variables:
+Copy the `./envValues/.env.local` file to `./.env`. You don't need to change anything for development
 
+You can also configure other variables if you need to:
 -   `VITE_API_URL` The url of the backend service
-
-You can configure other variables if you need to, but they are not required for the app to work:
-
 -   `VITE_LOCALE_KEY` The key used to store the locale in the local storage (default: `locale`)
 -   `VITE_LOCALE_DEFAULT` The default locale to use if no locale is set in the local storage (default: `en`)
 
