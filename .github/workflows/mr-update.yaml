@@ -167,7 +167,7 @@ jobs:
 
             - name: Deploy to Kubernetes
               run: |
-                  ./infra/deploy-mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} /tmp/ozyria.crt /tmp/ozyria.key
+                  ./infra/deploy_mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} /tmp/ozyria.crt /tmp/ozyria.key
 
             - name: Clean up API credentials files
               run: |
