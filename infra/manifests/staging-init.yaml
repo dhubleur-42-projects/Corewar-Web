@@ -1,0 +1,270 @@
+# create namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: corewar-staging
+---
+
+# create tls secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ozyria-tls
+  namespace: corewar-staging
+type: kubernetes.io/tls
+data:
+  tls.crt: <base64-encoded-cert>
+  tls.key: <base64-encoded-key>
+---
+
+# create data-credentials secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: data-credentials
+  namespace: corewar-staging
+type: Opaque
+data:
+  postgres-password: <base64-encoded-password>
+  redis-password: <base64-encoded-password>
+  jwt-secret: <base64-encoded-secret>
+
+---
+# create postgres deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: corewar-staging
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:13
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: corewar
+            - name: POSTGRES_USER
+              value: corewar
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: data-credentials
+                  key: postgres-password
+
+---
+# create postgres service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: corewar-staging
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP
+  clusterIP: None
+  
+---
+# create redis deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: corewar-staging
+spec:
+  selector:
+    matchLabels:
+      app: redis
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:6
+          ports:
+            - containerPort: 6379
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: data-credentials
+                  key: redis-password
+          args: ["--requirepass", "<redis-password>"]
+
+---
+# create redis service
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: corewar-staging
+spec:
+  selector:
+    app: redis
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+  type: ClusterIP
+  clusterIP: None
+
+---
+# create back-app deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: back-app
+  namespace: corewar-staging
+spec:
+  selector:
+    matchLabels:
+      app: back-app
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: back-app
+    spec:
+      containers:
+        - name: back-app
+          image: onorahubleur/corewar-back-app:staging-latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: back-app-config
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+
+---
+# create back-app service
+apiVersion: v1
+kind: Service
+metadata:
+  name: back-app
+  namespace: corewar-staging
+spec:
+  selector:
+    app: back-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+
+---
+# create front-app deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: front-app
+  namespace: corewar-staging
+spec:
+  selector:
+    matchLabels:
+      app: front-app
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: front-app
+    spec:
+      containers:
+        - name: front-app
+          image: onorahubleur/corewar-front-app:staging-latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 2
+            periodSeconds: 5
+
+---
+# create front-app service
+apiVersion: v1
+kind: Service
+metadata:
+  name: front-app
+  namespace: corewar-staging
+spec:
+  selector:
+    app: front-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+---
+# create apps ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: apps-ingress
+    namespace: corewar-staging
+    annotations:
+        nginx.ingress.kubernetes.io/proxy-body-size: "0"
+        kubernetes.io/ingress.class: "nginx"
+        nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+        nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+    tls:
+        - hosts:
+              - staging-corewar.ozyria.fr
+              - staging-corewar-api.ozyria.fr
+          secretName: ozyria-tls
+    rules:
+        - host: staging-corewar.ozyria.fr
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: front-app
+                            port:
+                                number: 80
+        - host: staging-corewar-api.ozyria.fr
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: back-app
+                            port:
+                                number: 80

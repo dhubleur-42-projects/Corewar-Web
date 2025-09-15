@@ -13,7 +13,8 @@ COPY . /app
 
 WORKDIR /app/apps/front-app
 ARG MR_ID
-COPY ./apps/front-app/envValues/.env.mr .env
+ARG ENVIRONMENT
+COPY ./apps/front-app/envValues/.env.${ENVIRONMENT} .env
 RUN sed -i "s/{{MR_ID}}/${MR_ID}/g" .env
 
 WORKDIR /app
