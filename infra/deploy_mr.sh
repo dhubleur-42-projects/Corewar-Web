@@ -42,11 +42,27 @@ sed -i "s/{{REDIS_PASSWORD}}/${REDIS_PASSWORD}/g" /tmp/back-app.env
 sed -i "s/{{JWT_SECRET}}/${JWT_SECRET}/g" /tmp/back-app.env
 kubectl create configmap back-app-config --from-env-file=/tmp/back-app.env -n corewar-mr-${MR_ID} --insecure-skip-tls-verify --dry-run=client -o yaml | kubectl apply --insecure-skip-tls-verify -f -
 
-cp ${WDIR}/manifests/mr.yaml /tmp/mr.yaml
-sed -i "s/{{MR_ID}}/${MR_ID}/g" /tmp/mr.yaml
-sed -i "s/{{REDIS_PASSWORD}}/${REDIS_PASSWORD}/g" /tmp/mr.yaml
-sed -i "s/{{BASE64_ENCODED_CERT}}/${BASE64_ENCODED_CERT}/g" /tmp/mr.yaml
-sed -i "s/{{BASE64_ENCODED_KEY}}/${BASE64_ENCODED_KEY}/g" /tmp/mr.yaml
-sed -i "s/{{COMMIT_SHA}}/${COMMIT_SHA}/g" /tmp/mr.yaml
+MANIFESTS=(01-utils.yaml 02-back.yaml 03-front.yaml 04-ingress.yaml)
+declare -A DEPLOYMENTS
+DEPLOYMENTS["01-utils.yaml"]="postgres,redis"
+DEPLOYMENTS["02-back.yaml"]="back-app"
+DEPLOYMENTS["03-front.yaml"]="front-app"
 
-kubectl apply -f /tmp/mr.yaml -n corewar-mr-${MR_ID} --insecure-skip-tls-verify --validate=false
+for manifest in "${MANIFESTS[@]}"; do
+  cp ${WDIR}/manifests/mr/${manifest} /tmp/${manifest}
+  sed -i "s/{{MR_ID}}/${MR_ID}/g" /tmp/${manifest}
+  sed -i "s/{{REDIS_PASSWORD}}/${REDIS_PASSWORD}/g" /tmp/${manifest}
+  sed -i "s/{{BASE64_ENCODED_CERT}}/${BASE64_ENCODED_CERT}/g" /tmp/${manifest}
+  sed -i "s/{{BASE64_ENCODED_KEY}}/${BASE64_ENCODED_KEY}/g" /tmp/${manifest}
+  sed -i "s/{{COMMIT_SHA}}/${COMMIT_SHA}/g" /tmp/${manifest}
+  echo "Applying manifest ${manifest}..."
+  kubectl apply -f /tmp/${manifest} -n corewar-mr-${MR_ID} --insecure-skip-tls-verify --validate=false
+
+  if [[ -n "${DEPLOYMENTS[$manifest]}" ]]; then
+    for deploy in ${DEPLOYMENTS[$manifest]//,/ }; do
+      echo "Waiting for deployment $deploy to be ready..."
+      kubectl wait --for=condition=available --timeout=300s deployment/$deploy -n corewar-mr-${MR_ID} --insecure-skip-tls-verify
+      echo "Deployment $deploy is ready."
+    done
+  fi
+done
