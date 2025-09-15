@@ -1,13 +1,33 @@
+# create namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: corewar-staging
+---
+
 # create tls secret
 apiVersion: v1
 kind: Secret
 metadata:
   name: ozyria-tls
-  namespace: corewar-mr-{{MR_ID}}
+  namespace: corewar-staging
 type: kubernetes.io/tls
 data:
-  tls.crt: {{BASE64_ENCODED_CERT}}
-  tls.key: {{BASE64_ENCODED_KEY}}
+  tls.crt: <base64-encoded-cert>
+  tls.key: <base64-encoded-key>
+---
+
+# create data-credentials secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: data-credentials
+  namespace: corewar-staging
+type: Opaque
+data:
+  postgres-password: <base64-encoded-password>
+  redis-password: <base64-encoded-password>
+  jwt-secret: <base64-encoded-secret>
 
 ---
 # create postgres deployment
@@ -15,7 +35,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgres
-  namespace: corewar-mr-{{MR_ID}}
+  namespace: corewar-staging
 spec:
   selector:
     matchLabels:
@@ -48,7 +68,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgres
-  namespace: corewar-mr-{{MR_ID}}
+  namespace: corewar-staging
 spec:
   selector:
     app: postgres
@@ -65,7 +85,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis
-  namespace: corewar-mr-{{MR_ID}}
+  namespace: corewar-staging
 spec:
   selector:
     matchLabels:
@@ -87,7 +107,7 @@ spec:
                 secretKeyRef:
                   name: data-credentials
                   key: redis-password
-          args: ["--requirepass", "{{REDIS_PASSWORD}}"]
+          args: ["--requirepass", "<redis-password>"]
 
 ---
 # create redis service
@@ -95,7 +115,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: redis
-  namespace: corewar-mr-{{MR_ID}}
+  namespace: corewar-staging
 spec:
   selector:
     app: redis
@@ -112,7 +132,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: back-app
-  namespace: corewar-mr-{{MR_ID}}
+  namespace: corewar-staging
 spec:
   selector:
     matchLabels:
@@ -130,7 +150,7 @@ spec:
     spec:
       containers:
         - name: back-app
-          image: onorahubleur/corewar-back-app:mr-{{MR_ID}}-{{COMMIT_SHA}}
+          image: onorahubleur/corewar-back-app:staging-latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
@@ -150,7 +170,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: back-app
-  namespace: corewar-mr-{{MR_ID}}
+  namespace: corewar-staging
 spec:
   selector:
     app: back-app
@@ -165,7 +185,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: front-app
-  namespace: corewar-mr-{{MR_ID}}
+  namespace: corewar-staging
 spec:
   selector:
     matchLabels:
@@ -183,7 +203,7 @@ spec:
     spec:
       containers:
         - name: front-app
-          image: onorahubleur/corewar-front-app:mr-{{MR_ID}}-{{COMMIT_SHA}}
+          image: onorahubleur/corewar-front-app:staging-latest
           imagePullPolicy: Always
           ports:
             - containerPort: 80
@@ -200,7 +220,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: front-app
-  namespace: corewar-mr-{{MR_ID}}
+  namespace: corewar-staging
 spec:
   selector:
     app: front-app
@@ -215,7 +235,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
     name: apps-ingress
-    namespace: corewar-mr-{{MR_ID}}
+    namespace: corewar-staging
     annotations:
         nginx.ingress.kubernetes.io/proxy-body-size: "0"
         kubernetes.io/ingress.class: "nginx"
@@ -224,11 +244,11 @@ metadata:
 spec:
     tls:
         - hosts:
-              - mr{{MR_ID}}-corewar.ozyria.fr
-              - mr{{MR_ID}}-corewar-api.ozyria.fr
+              - staging-corewar.ozyria.fr
+              - staging-corewar-api.ozyria.fr
           secretName: ozyria-tls
     rules:
-        - host: mr{{MR_ID}}-corewar.ozyria.fr
+        - host: staging-corewar.ozyria.fr
           http:
               paths:
                   - path: /
@@ -238,7 +258,7 @@ spec:
                             name: front-app
                             port:
                                 number: 80
-        - host: mr{{MR_ID}}-corewar-api.ozyria.fr
+        - host: staging-corewar-api.ozyria.fr
           http:
               paths:
                   - path: /

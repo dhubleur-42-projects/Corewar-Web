@@ -1,15 +1,16 @@
-name: MR Update
+name: Staging update
 
 env:
     PNPM_VERSION: '10.12.4'
     NODE_VERSION: '23'
 
 on:
-    pull_request:
-        types: [opened, synchronize, reopened]
+    push:
+        branches:
+            - main
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+    group: ${{ github.workflow }}
     cancel-in-progress: true
 
 jobs:
@@ -139,11 +140,10 @@ jobs:
                   target: back-app
                   platforms: linux/amd64
                   build-args: |
-                      MR_ID=${{ github.event.pull_request.number }}
-                      ENVIRONMENT=mr
+                      ENVIRONMENT=staging
                   tags: |
-                      onorahubleur/corewar-back-app:mr-${{ github.event.pull_request.number }}-latest
-                      onorahubleur/corewar-back-app:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
+                      onorahubleur/corewar-back-app:staging-latest
+                      onorahubleur/corewar-back-app:staging-${{ steps.vars.outputs.sha_short }}
 
             - name: Build and push front-app image
               uses: docker/build-push-action@v6
@@ -154,11 +154,10 @@ jobs:
                   target: front-app
                   platforms: linux/amd64
                   build-args: |
-                      MR_ID=${{ github.event.pull_request.number }}
-                      ENVIRONMENT=mr
+                      ENVIRONMENT=staging
                   tags: |
-                      onorahubleur/corewar-front-app:mr-${{ github.event.pull_request.number }}-latest
-                      onorahubleur/corewar-front-app:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
+                      onorahubleur/corewar-front-app:staging-latest
+                      onorahubleur/corewar-front-app:staging-${{ steps.vars.outputs.sha_short }}
 
     deploy:
         name: Deploy to Kubernetes
@@ -179,23 +178,18 @@ jobs:
 
             - name: Deploy
               run: |
-                  ./infra/deploy_mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ secrets.TLS_CERT }} ${{ secrets.TLS_KEY }} ${{ steps.vars.outputs.sha_short }}
+                  ./infra/deploy_staging.sh ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ steps.vars.outputs.sha_short }}
 
-    comment-pr:
-      name: Comment PR with deployment info
+    comment-discord:
+      name: Notify Discord with deployment info
       needs: deploy
       runs-on: ubuntu-24.04
       steps:
-        - name: Post a new comment
-          uses: mshick/add-pr-comment@v2
-          with:
-            allow-repeats: true
-            message: |
-              🚀 Deployment Info
+        - name: Set short commit SHA
+          run: echo "COMMIT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
 
-              The MR has been deployed to a temporary environment for testing
-
-              - Frontend: `https://mr${{ github.event.pull_request.number }}-corewar.ozyria.fr`
-              - Backend: `https://mr${{ github.event.pull_request.number }}-corewar-api.ozyria.fr`
-
-              > Note: The environment will be automatically deleted when the MR is closed
+        - name: Send Discord notification
+          run: |
+            curl -H "Content-Type: application/json" \
+                -d "{\"content\": \"🚀 Deployment Info\n\nCommit \`${COMMIT_SHA}\` has been deployed to the **staging environment**.\n\n- Frontend: \`https://staging-corewar.ozyria.fr\`\n- Backend: \`https://staging-corewar-api.ozyria.fr\`\n\n> Note: This environment is for testing purposes only.\"}" \
+                ${{ secrets.DISCORD_WEBHOOK_URL }}

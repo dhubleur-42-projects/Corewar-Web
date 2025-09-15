@@ -12,8 +12,10 @@ RUN apk add --no-cache openssl libc6-compat
 COPY . /app
 
 WORKDIR /app/apps/front-app
-ARG VITE_API_URL
-RUN echo "VITE_API_URL=$VITE_API_URL" > .env
+ARG MR_ID
+ARG ENVIRONMENT
+COPY ./apps/front-app/envValues/.env.${ENVIRONMENT} .env
+RUN sed -i "s/{{MR_ID}}/${MR_ID}/g" .env
 
 WORKDIR /app
 
