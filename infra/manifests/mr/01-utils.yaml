@@ -1,0 +1,107 @@
+# create tls secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ozyria-tls
+  namespace: corewar-mr-{{MR_ID}}
+type: kubernetes.io/tls
+data:
+  tls.crt: {{BASE64_ENCODED_CERT}}
+  tls.key: {{BASE64_ENCODED_KEY}}
+
+---
+# create postgres deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: corewar-mr-{{MR_ID}}
+spec:
+  selector:
+    matchLabels:
+      app: postgres
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:13
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: corewar
+            - name: POSTGRES_USER
+              value: corewar
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: data-credentials
+                  key: postgres-password
+
+---
+# create postgres service
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: corewar-mr-{{MR_ID}}
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP
+  clusterIP: None
+  
+---
+# create redis deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: corewar-mr-{{MR_ID}}
+spec:
+  selector:
+    matchLabels:
+      app: redis
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:6
+          ports:
+            - containerPort: 6379
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: data-credentials
+                  key: redis-password
+          args: ["--requirepass", "{{REDIS_PASSWORD}}"]
+
+---
+# create redis service
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: corewar-mr-{{MR_ID}}
+spec:
+  selector:
+    app: redis
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+  type: ClusterIP
+  clusterIP: None

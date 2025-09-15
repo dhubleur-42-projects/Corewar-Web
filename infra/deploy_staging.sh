@@ -30,7 +30,22 @@ sed -i "s/{{JWT_SECRET}}/${JWT_SECRET}/g" /tmp/back-app.env
 
 kubectl create configmap back-app-config --from-env-file=/tmp/back-app.env -n corewar-staging --insecure-skip-tls-verify --dry-run=client -o yaml | kubectl apply --insecure-skip-tls-verify -f -
 
-cp ${WDIR}/manifests/staging.yaml /tmp/staging.yaml
-sed -i "s/{{COMMIT_SHA}}/${COMMIT_SHA}/g" /tmp/staging.yaml
+MANIFESTS=(01-back.yaml 02-front.yaml 03-ingress.yaml)
+declare -A DEPLOYMENTS
+DEPLOYMENTS["01-back.yaml"]="back-app"
+DEPLOYMENTS["02-front.yaml"]="front-app"
 
-kubectl apply -f /tmp/staging.yaml -n corewar-staging --insecure-skip-tls-verify --validate=false
+for manifest in "${MANIFESTS[@]}"; do
+  cp ${WDIR}/manifests/staging/${manifest} /tmp/${manifest}
+  sed -i "s/{{COMMIT_SHA}}/${COMMIT_SHA}/g" /tmp/${manifest}
+  echo "Applying manifest ${manifest}..."
+  kubectl apply -f /tmp/${manifest} -n corewar-staging --insecure-skip-tls-verify --validate=false
+
+  if [[ -n "${DEPLOYMENTS[$manifest]}" ]]; then
+    for deploy in ${DEPLOYMENTS[$manifest]//,/ }; do
+      echo "Waiting for deployment $deploy to be ready..."
+      kubectl rollout status deployment/$deploy -n corewar-staging --insecure-skip-tls-verify --timeout=180s
+      echo "Deployment $deploy is ready."
+    done
+  fi
+done

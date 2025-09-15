@@ -6,7 +6,7 @@ env:
 
 on:
     pull_request:
-        types: [opened, synchronize, reopened]
+        types: [opened, synchronize, reopened, closed]
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
@@ -15,6 +15,7 @@ concurrency:
 jobs:
     lint-front-app:
         name: Lint front-app
+        if: ${{ github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.action == 'reopened' }}
 
         runs-on: ubuntu-24.04
 
@@ -46,6 +47,7 @@ jobs:
 
     lint-back-app:
         name: Lint back-app
+        if: ${{ github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.action == 'reopened' }}
 
         runs-on: ubuntu-24.04
 
@@ -77,6 +79,7 @@ jobs:
 
     lint-server-common:
         name: Lint server-common
+        if: ${{ github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.action == 'reopened' }}
 
         runs-on: ubuntu-24.04
 
@@ -181,21 +184,44 @@ jobs:
               run: |
                   ./infra/deploy_mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ secrets.TLS_CERT }} ${{ secrets.TLS_KEY }} ${{ steps.vars.outputs.sha_short }}
 
-    comment-pr:
-      name: Comment PR with deployment info
-      needs: deploy
-      runs-on: ubuntu-24.04
-      steps:
-        - name: Post a new comment
-          uses: mshick/add-pr-comment@v2
-          with:
-            allow-repeats: true
-            message: |
-              🚀 Deployment Info
+            - name: Comment MR with deployment info
+              uses: mshick/add-pr-comment@v2
+              with:
+                allow-repeats: true
+                message: |
+                  🚀 Deployment Info
 
-              The MR has been deployed to a temporary environment for testing
+                  The MR has been deployed to a temporary environment for testing
 
-              - Frontend: `https://mr${{ github.event.pull_request.number }}-corewar.ozyria.fr`
-              - Backend: `https://mr${{ github.event.pull_request.number }}-corewar-api.ozyria.fr`
+                  - Frontend: `https://mr${{ github.event.pull_request.number }}-corewar.ozyria.fr`
+                  - Backend: `https://mr${{ github.event.pull_request.number }}-corewar-api.ozyria.fr`
 
-              > Note: The environment will be automatically deleted when the MR is closed
+                  > Note: The environment will be automatically deleted when the MR is closed
+
+    delete-mr-namespace:
+        name: Delete MR Namespace
+        if: ${{ github.event.action == 'closed' }}
+
+        runs-on: ubuntu-24.04
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up kubeconfig
+              run: |
+                mkdir -p ~/.kube
+                echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
+
+            - name: Delete MR Namespace
+              run: |
+                  kubectl delete namespace corewar-mr-${{ github.event.pull_request.number }} --ignore-not-found --insecure-skip-tls-verify
+
+            - name: Comment MR with cleanup info
+              uses: mshick/add-pr-comment@v2
+              with:
+                allow-repeats: true
+                message: |
+                  🗑️ Cleanup Info
+
+                  The temporary environment for this MR has been deleted.
