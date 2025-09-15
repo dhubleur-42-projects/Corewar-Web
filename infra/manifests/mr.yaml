@@ -10,17 +10,6 @@ data:
   tls.key: {{BASE64_ENCODED_KEY}}
 
 ---
-# create postgres password secret
-apiVersion: v1
-kind: Secret
-metadata:
-  name: postgres-password
-  namespace: corewar-mr-{{MR_ID}}
-type: Opaque
-data:
-  password: {{POSTGRES_PASSWORD_BASE64}}
-
----
 # create postgres deployment
 apiVersion: apps/v1
 kind: Deployment
@@ -50,8 +39,8 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: postgres-password
-                  key: password
+                  name: data-credentials
+                  key: postgres-password
 
 ---
 # create postgres service
@@ -69,17 +58,6 @@ spec:
       targetPort: 5432
   type: ClusterIP
   clusterIP: None
-
----
-# create redis password secret
-apiVersion: v1
-kind: Secret
-metadata:
-  name: redis-password
-  namespace: corewar-mr-{{MR_ID}}
-type: Opaque
-data:
-  password: {{REDIS_PASSWORD_BASE64}}
   
 ---
 # create redis deployment
@@ -107,8 +85,8 @@ spec:
             - name: REDIS_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: redis-password
-                  key: password
+                  name: data-credentials
+                  key: redis-password
           args: ["--requirepass", "{{REDIS_PASSWORD}}"]
 
 ---
@@ -152,7 +130,7 @@ spec:
     spec:
       containers:
         - name: back-app
-          image: onorahubleur/corewar-back-app:mr-{{MR_ID}}
+          image: onorahubleur/corewar-back-app:mr-{{MR_ID}}-{{COMMIT_SHA}}
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
@@ -205,7 +183,7 @@ spec:
     spec:
       containers:
         - name: front-app
-          image: onorahubleur/corewar-front-app:mr-{{MR_ID}}
+          image: onorahubleur/corewar-front-app:mr-{{MR_ID}}-{{COMMIT_SHA}}
           imagePullPolicy: Always
           ports:
             - containerPort: 80

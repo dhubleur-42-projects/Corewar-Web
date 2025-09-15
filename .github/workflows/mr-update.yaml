@@ -121,6 +121,10 @@ jobs:
                   username: ${{ secrets.DOCKER_USERNAME }}
                   password: ${{ secrets.DOCKER_PASSWORD }}
 
+            - name: Compute short SHA
+              id: vars
+              run: echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
             - name: Build and push back-app image
               id: push
               uses: docker/build-push-action@v6
@@ -133,7 +137,8 @@ jobs:
                   build-args: |
                       MR_ID=${{ github.event.pull_request.number }}
                   tags: |
-                      onorahubleur/corewar-back-app:mr-${{ github.event.pull_request.number }}
+                      onorahubleur/corewar-back-app:mr-${{ github.event.pull_request.number }}-latest
+                      onorahubleur/corewar-back-app:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
 
             - name: Build and push front-app image
               uses: docker/build-push-action@v6
@@ -146,7 +151,8 @@ jobs:
                   build-args: |
                       MR_ID=${{ github.event.pull_request.number }}
                   tags: |
-                      onorahubleur/corewar-front-app:mr-${{ github.event.pull_request.number }}
+                      onorahubleur/corewar-front-app:mr-${{ github.event.pull_request.number }}-latest
+                      onorahubleur/corewar-front-app:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
 
     deploy:
         name: Deploy to Kubernetes
@@ -156,6 +162,10 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
+            - name: Compute short SHA
+              id: vars
+              run: echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
             - name: Set up kubeconfig
               run: |
                 mkdir -p ~/.kube
@@ -163,7 +173,7 @@ jobs:
 
             - name: Deploy
               run: |
-                  ./infra/deploy_mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ secrets.TLS_CERT }} ${{ secrets.TLS_KEY }}
+                  ./infra/deploy_mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ secrets.TLS_CERT }} ${{ secrets.TLS_KEY }} ${{ steps.vars.outputs.sha_short }}
 
     comment-pr:
         name: Comment PR with deployment info
