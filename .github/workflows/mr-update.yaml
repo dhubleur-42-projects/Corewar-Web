@@ -189,6 +189,7 @@ jobs:
         - name: Post a new comment
           uses: mshick/add-pr-comment@v2
           with:
+            allow-repeats: true
             message: |
               🚀 Deployment Info
 
