@@ -180,3 +180,17 @@ jobs:
             - name: Deploy
               run: |
                   ./infra/deploy_staging.sh ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ steps.vars.outputs.sha_short }}
+
+    comment-discord:
+      name: Notify Discord with deployment info
+      needs: deploy
+      runs-on: ubuntu-24.04
+      steps:
+        - name: Set short commit SHA
+          run: echo "COMMIT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
+        - name: Send Discord notification
+          run: |
+            curl -H "Content-Type: application/json" \
+                -d "{\"content\": \"🚀 Deployment Info\n\nCommit \`${COMMIT_SHA}\` has been deployed to the **staging environment**.\n\n- Frontend: \`https://staging-corewar.ozyria.fr\`\n- Backend: \`https://staging-corewar-api.ozyria.fr\`\n\n> Note: This environment is for testing purposes only.\"}" \
+                ${{ secrets.DISCORD_WEBHOOK_URL }}

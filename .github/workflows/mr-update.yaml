@@ -182,19 +182,19 @@ jobs:
                   ./infra/deploy_mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ secrets.TLS_CERT }} ${{ secrets.TLS_KEY }} ${{ steps.vars.outputs.sha_short }}
 
     comment-pr:
-        name: Comment PR with deployment info
-        needs: deploy
-        runs-on: ubuntu-24.04
-        steps:
-            - name: Post comment
-              uses: marocchino/sticky-pull-request-comment@v2
-              with:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                  header: '🚀 Deployment Info'
-                  message: |
-                      The MR has been deployed to a temporary environment for testing
+      name: Comment PR with deployment info
+      needs: deploy
+      runs-on: ubuntu-24.04
+      steps:
+        - name: Post a new comment
+          uses: mshick/add-pr-comment@v2
+          with:
+            message: |
+              🚀 Deployment Info
 
-                      - Frontend: `https://mr${{ github.event.pull_request.number }}-corewar.ozyria.fr`
-                      - Backend: `https://mr${{ github.event.pull_request.number }}-corewar-api.ozyria.fr`
+              The MR has been deployed to a temporary environment for testing
 
-                      > Note: The environment will be automatically deleted when the MR is closed
+              - Frontend: `https://mr${{ github.event.pull_request.number }}-corewar.ozyria.fr`
+              - Backend: `https://mr${{ github.event.pull_request.number }}-corewar-api.ozyria.fr`
+
+              > Note: The environment will be automatically deleted when the MR is closed
