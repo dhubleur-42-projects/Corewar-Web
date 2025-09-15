@@ -130,6 +130,8 @@ jobs:
                   push: true
                   target: back-app
                   platforms: linux/amd64
+                  build-args: |
+                      MR_ID=${{ github.event.pull_request.number }}
                   tags: |
                       onorahubleur/corewar-back-app:mr-${{ github.event.pull_request.number }}
 
@@ -142,7 +144,7 @@ jobs:
                   target: front-app
                   platforms: linux/amd64
                   build-args: |
-                      VITE_API_URL=https://mr${{ github.event.pull_request.number }}-corewar-api.ozyria.fr
+                      MR_ID=${{ github.event.pull_request.number }}
                   tags: |
                       onorahubleur/corewar-front-app:mr-${{ github.event.pull_request.number }}
 
