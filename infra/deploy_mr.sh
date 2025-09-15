@@ -61,7 +61,7 @@ for manifest in "${MANIFESTS[@]}"; do
   if [[ -n "${DEPLOYMENTS[$manifest]}" ]]; then
     for deploy in ${DEPLOYMENTS[$manifest]//,/ }; do
       echo "Waiting for deployment $deploy to be ready..."
-      kubectl wait --for=condition=available --timeout=300s deployment/$deploy -n corewar-mr-${MR_ID} --insecure-skip-tls-verify
+      kubectl rollout status deployment/$deploy -n corewar-mr-${MR_ID} --insecure-skip-tls-verify --timeout=180s
       echo "Deployment $deploy is ready."
     done
   fi
