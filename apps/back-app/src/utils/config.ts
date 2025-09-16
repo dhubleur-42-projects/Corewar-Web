@@ -61,7 +61,7 @@ const config = {
 		.default('back-app')
 		.asString(),
 	authorizedIssuers: envValues.get('AUTHORIZED_ISSUERS').asArray<string>(),
-	privateKetValidityTime: envValues
+	privateKeyValidityTime: envValues
 		.get('PRIVATE_KEY_VALIDITY')
 		.default('86400000')
 		.asNumber(),
