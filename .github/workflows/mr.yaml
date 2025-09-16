@@ -1,4 +1,4 @@
-name: MR Update
+name: MR workflow
 
 env:
     PNPM_VERSION: '10.12.4'

@@ -5,6 +5,11 @@ import { EnvValues } from 'server-common'
 
 const envValues = new EnvValues()
 
+const isSslEnv = envValues
+	.get('IS_SSL')
+	.default('false')
+	.asBoolean()
+
 const config = {
 	port: envValues.get('PORT').default('3000').asNumber(),
 	loggerKey: envValues.get('LOGGER_KEY').asString(),
@@ -39,13 +44,15 @@ const config = {
 	cookieConfig: {
 		httpOnly: true,
 		sameSite: 'lax' as const,
-		secure: envValues.get('IS_PROD').default('false').asBoolean(),
-		...(envValues.get('IS_PROD').default('false').asBoolean()
+		secure: isSslEnv,
+		...(isSslEnv
 			? { domain: envValues.get('COOKIE_DOMAIN').asString() }
 			: {}),
 		path: '/',
 		withCredentials: true,
 	},
+	isProd: envValues.get('IS_PROD').default('false').asBoolean(),
+	loginsWhitelist: envValues.get('LOGINS_WHITELIST').default('').asArray<string>(),
 	redisHost: envValues.get('REDIS_HOST').asString(),
 	redisPort: envValues.get('REDIS_PORT').default('6379').asNumber(),
 	redisPassword: envValues.get('REDIS_PASSWORD').asString(),
@@ -54,7 +61,7 @@ const config = {
 		.default('back-app')
 		.asString(),
 	authorizedIssuers: envValues.get('AUTHORIZED_ISSUERS').asArray<string>(),
-	privateKetValidityTime: envValues
+	privateKeyValidityTime: envValues
 		.get('PRIVATE_KEY_VALIDITY')
 		.default('86400000')
 		.asNumber(),

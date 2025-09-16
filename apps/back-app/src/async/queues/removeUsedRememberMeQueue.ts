@@ -27,7 +27,7 @@ const removeUsedRememeberMeHandler = async (
 	data: RemoveUsedRememberMeQueueData,
 	transaction: TransactionClient,
 ) => {
-	const logger = getSubLogger('REMOVE USED REMEMBER ME QUEUE')
+	const logger = getSubLogger('QUEUE')
 	try {
 		await transaction.rememberMe.delete({
 			where: { id: data.rememberMeId },

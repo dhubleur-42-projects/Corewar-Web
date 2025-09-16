@@ -1,7 +1,7 @@
-import { Outlet, useLocation, useNavigate } from 'react-router'
+import { Outlet, useNavigate } from 'react-router'
 import useStore from '../../common/store/store'
-import { useCallback, useEffect } from 'react'
-import { useFetchMe, useLogout } from '../../common/queries/useAuthQueries'
+import { useCallback, useEffect, useRef } from 'react'
+import { useFetchMe, useLogout, useResetFetchMe } from '../../common/queries/useAuthQueries'
 import { Button, styled } from '@mui/material'
 import { defineI18n, useTranslate } from '../../common/utils/i18n'
 
@@ -37,7 +37,6 @@ const Content = styled('div')({
 
 function Dashboard() {
 	const navigate = useNavigate()
-	const location = useLocation()
 	const translate = useTranslate()
 
 	const {
@@ -45,16 +44,20 @@ function Dashboard() {
 		isSuccess: fetchMeSuccess,
 		data: fetchMeData,
 	} = useFetchMe()
+	const resetFetchMe = useResetFetchMe()
 
-	const user = useStore((state) => state.user)
-	const setUser = useStore((state) => state.setUser)
+	const { user, isUserFromCache, setUser } = useStore()
+
+	const isUserDefined = user != null
+
+	const logoutRef = useRef(false)
 
 	useEffect(() => {
-		if (user == null) {
+		if (!isUserDefined || isUserFromCache) {
 			if (fetchMeLoading) {
 				return
 			}
-			if (fetchMeSuccess) {
+			if (fetchMeSuccess && logoutRef.current === false) {
 				setUser(fetchMeData.user)
 				return
 			}
@@ -63,25 +66,27 @@ function Dashboard() {
 			})
 		}
 	}, [
-		user,
+		isUserDefined,
+		isUserFromCache,
 		navigate,
-		location,
 		fetchMeLoading,
 		fetchMeSuccess,
 		fetchMeData,
 		setUser,
 	])
 
-	const logoutStore = useStore((state) => state.logout)
 	const { mutate: logoutMutate } = useLogout()
 
 	const handleLogout = useCallback(() => {
 		logoutMutate(undefined, {
 			onSuccess: () => {
-				logoutStore()
+				resetFetchMe()
+				logoutRef.current = true
+				setUser(null)
+				navigate('/', { replace: true })
 			},
 		})
-	}, [logoutMutate, logoutStore])
+	}, [logoutMutate, setUser, navigate, resetFetchMe])
 
 	return (
 		<>

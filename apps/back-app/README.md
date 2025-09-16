@@ -38,10 +38,12 @@ You can also configure other variables if you need to:
 -   `FRONT_URL` The URL of the front app, default is `http://localhost:8080`
 -   `ACCESS_TOKEN_VALIDITY_SEC` The validity of the access token in seconds, default is `3600` (1 hour)
 -   `ACCESS_TOKEN_COOKIE_NAME` The name of the cookie that stores the access token, default is `access_token`
--   `REMBER_ME_VALIDITY_SEC` The validity of the "remember me" token in seconds, default is `2592000` (30 days)
--   `REMBER_ME_COOKIE_NAME` The name of the cookie that stores the "remember me" token, default is `remember_me`
+-   `REMEMBER_ME_VALIDITY_SEC` The validity of the "remember me" token in seconds, default is `2592000` (30 days)
+-   `REMEMBER_ME_COOKIE_NAME` The name of the cookie that stores the "remember me" token, default is `remember_me`
+-   `IS_SSL` Set to `true` if the app is running with SSL (https), default is `false`
 -   `COOKIE_DOMAIN` The domain for the cookies, don't set it if you are running the app locally
 -   `IS_PROD` Set to `true` if the app is running in production mode, default is `false`
+-   `USER_WHITELIST` A comma-separated list of user logins that are	 allowed to access the app, if not set, all users are allowed
 -   `PRIVATE_KEY_VALIDITY` Time in ms for which the private key of the JWKS will be valid, default is `86400000` (1 day)
 -   `REDIS_PORT` The port for the Redis server, default is `6379`
 -	`REDIS_PREFIX` The prefix for the Redis keys, default is `back-app`

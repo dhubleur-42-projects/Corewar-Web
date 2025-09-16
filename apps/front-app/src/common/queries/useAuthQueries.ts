@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { generateFetchApi } from './queries'
 
 interface AuthLinkResponse {
@@ -48,6 +48,13 @@ export const useFetchMe = () => {
 		refetchOnWindowFocus: false,
 		retry: false,
 	})
+}
+
+export const useResetFetchMe = () => {
+	const queryClient = useQueryClient()
+	return () => {
+		queryClient.resetQueries({ queryKey: ['fetchMe'] })
+	}
 }
 
 const logout = generateFetchApi<[], void>('/auth/logout', {

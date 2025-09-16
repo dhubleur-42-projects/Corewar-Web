@@ -64,15 +64,21 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 					status: userRes.status,
 					statusText: userRes.statusText,
 				})
-				reply.code(500).send({ error: 'Failed to fetch user info' })
+				reply.code(500).send({ error: 'Failed to authenticate' })
 				return
 			}
 
 			const { id, login } = await userRes.json()
 
+			if (config.loginsWhitelist.length > 0 && !config.loginsWhitelist.includes(login)) {
+				logger.info(`Login not authorized: ${login}`)
+				reply.code(403).send({ error: 'Login not authorized' })
+				return
+			}
+
 			if (id == null || login == null) {
 				logger.debug('Invalid user info received', { id, login })
-				reply.code(500).send({ error: 'Invalid user info received' })
+				reply.code(500).send({ error: 'Failed to authenticate' })
 				return
 			}
 			logger.debug(`User authenticated from 42: ${login} (${id})`)
@@ -140,8 +146,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 		}),
 	})
 
-	fastify.get('/me', {
-		preHandler: fastify.authenticate,
+	fastify.secureGet('/me', {
 		handler: fastify.withTransaction(async (request, reply) => {
 			const user = await request.transaction.user.findUnique({
 				where: { id: request.userId },
@@ -161,8 +166,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 		}),
 	})
 
-	fastify.post('/logout', {
-		preHandler: fastify.authenticate,
+	fastify.securePost('/logout', {
 		handler: fastify.withTransaction(async (request, reply) => {
 			const { userId } = request
 
@@ -170,8 +174,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				where: { userId },
 			})
 
-			reply.clearCookie(config.accessTokenCookieName)
-			reply.clearCookie(config.rememberMeCookieName)
+			reply.clearCookie(config.accessTokenCookieName, config.cookieConfig)
+			reply.clearCookie(config.rememberMeCookieName, config.cookieConfig)
 			reply.status(200).send({ message: 'Logout successful' })
 		}),
 	})

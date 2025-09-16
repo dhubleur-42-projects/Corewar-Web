@@ -28,14 +28,13 @@ function Login() {
 	const navigate = useNavigate()
 	const translate = useTranslate()
 
-	const user = useStore((state) => state.user)
-	const setUser = useStore((state) => state.setUser)
+	const { user, isUserFromCache, setUser } = useStore()
 
 	useEffect(() => {
-		if (user != null) {
+		if (user != null && !isUserFromCache) {
 			navigate('/dashboard/home', { replace: true })
 		}
-	}, [user, navigate])
+	}, [user, navigate, isUserFromCache])
 
 	const { isSuccess: fetchMeSuccess, data: fetchMeData } = useFetchMe()
 

@@ -23,7 +23,7 @@ export function createQueue<T>(
 	queueOption: JobsOptions,
 	handler: QueueHandler<T>,
 ) {
-	const logger = getSubLogger('QUEUES')
+	const logger = getSubLogger('QUEUE')
 	const queue = fastify.createQueue<T>(name, queueOption)
 	queues[name] = queue
 

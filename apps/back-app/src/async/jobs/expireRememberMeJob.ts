@@ -2,7 +2,7 @@ import { getSubLogger } from 'server-common'
 import { TransactionClient } from '../../plugins/transaction'
 
 async function expireRememberMeJob(transaction: TransactionClient) {
-	const logger = getSubLogger('EXPIRE REMEMBER ME JOB')
+	const logger = getSubLogger('JOB')
 	const res = await transaction.rememberMe.deleteMany({
 		where: {
 			expiresAt: {

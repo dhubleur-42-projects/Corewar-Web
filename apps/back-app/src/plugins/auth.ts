@@ -35,7 +35,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 				if (!payload.userId) {
 					return reply
 						.status(401)
-						.send({ error: 'Invalid accessToken payload' })
+						.send({ error: 'Invalid token' })
 				}
 
 				const record = await fastify.prisma.user.findUnique({
@@ -65,7 +65,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 				if (!payload.rememberMeId) {
 					return reply
 						.status(401)
-						.send({ error: 'Invalid rememberMeToken payload' })
+						.send({ error: 'Invalid token' })
 				}
 
 				const record = await fastify.prisma.rememberMe.findUnique({
@@ -75,7 +75,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 				if (record == null) {
 					return reply
 						.status(401)
-						.send({ error: 'RememberMe ID not found' })
+						.send({ error: 'Invalid token' })
 				}
 
 				await addToRemoveUsedRememberMeQueue(record.id)
@@ -134,11 +134,11 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 			} catch (_) {
 				return reply
 					.status(401)
-					.send({ error: 'Invalid rememberMeToken' })
+					.send({ error: 'Invalid token' })
 			}
 		}
 
-		return reply.status(401).send({ error: 'Authentication required' })
+		return reply.status(401).send()
 	})
 }
 

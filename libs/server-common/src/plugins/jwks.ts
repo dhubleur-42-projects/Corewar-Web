@@ -30,17 +30,24 @@ export const privateKeyRedisKey = 'privateKey'
 
 export const jwksAlg = 'RS256'
 
-const jwksPlugin: FastifyPluginAsync<{
-	redisOptions: RedisOptions
+type SignOption = {
 	privateKeyValidityTime: number
 	publicKeyValidityTime: number
-	authorizedIssuers?: string[]
 	issuer: string
+}
+
+type VerifyOption = {
+	authorizedIssuers?: string[]
+	selfAudience: string
+}
+
+const jwksPlugin: FastifyPluginAsync<{
+	redisOptions: RedisOptions
 	redisPrefix: string
-	aud: string
+	signOptions?: SignOption
+	verifyOptions?: VerifyOption
 }> = async (fastify, options) => {
-	const { redisOptions, privateKeyValidityTime, publicKeyValidityTime, authorizedIssuers, issuer, redisPrefix, aud } =
-		options
+	const { redisOptions, redisPrefix, signOptions, verifyOptions } = options
 	const redis = new Redis(redisOptions)
 
 	if (redis === null) {
@@ -54,6 +61,9 @@ const jwksPlugin: FastifyPluginAsync<{
 	fastify.decorate('jwksRedis', redis)
 
 	async function generateKey() {
+		if (signOptions == null) {
+			throw new Error('Sign options are not provided')
+		}
 		const { publicKey, privateKey } = await jose.generateKeyPair(jwksAlg, {
 			extractable: true,
 		})
@@ -70,7 +80,7 @@ const jwksPlugin: FastifyPluginAsync<{
 
 		currentKeys.keys.push({
 			key: publicKeyJwt,
-			validity: now + publicKeyValidityTime,
+			validity: now + signOptions.publicKeyValidityTime,
 			kid: kid,
 		})
 
@@ -84,24 +94,27 @@ const jwksPlugin: FastifyPluginAsync<{
 			fastify.getRedisKey(publicKeysRedisKey),
 			JSON.stringify(currentKeys),
 			'EX',
-			publicKeyValidityTime / 1000,
+			signOptions.publicKeyValidityTime / 1000,
 		)
 
 		await fastify.jwksRedis.set(
 			fastify.getRedisKey(privateKeyRedisKey),
 			JSON.stringify({
 				key: privateKeyJwt,
-				validity: now + privateKeyValidityTime,
+				validity: now + signOptions.privateKeyValidityTime,
 				kid: kid,
 			} as Key),
 			'EX',
-			privateKeyValidityTime / 1000,
+			signOptions.privateKeyValidityTime / 1000,
 		)
 	}
 
 	fastify.decorate(
 		'signRsaToken',
 		async <T extends jose.JWTPayload>(payload: T, expirationTime: number, aud: string[] | string): Promise<string> => {
+			if (signOptions == null) {
+				throw new Error('Sign options are not provided')
+			}
 			const privateKeyData = JSON.parse(
 				(await fastify.jwksRedis.get(fastify.getRedisKey(privateKeyRedisKey))) || '{}',
 			) as Key
@@ -123,7 +136,7 @@ const jwksPlugin: FastifyPluginAsync<{
 					Math.round((Date.now() + expirationTime) / 1000),
 				)
 				.setAudience(aud)
-				.setIssuer(issuer)
+				.setIssuer(signOptions.issuer)
 				.sign(privateKeyData.key)
 
 			return token
@@ -133,6 +146,9 @@ const jwksPlugin: FastifyPluginAsync<{
 	fastify.decorate('jwksStores', {})
 
 	fastify.decorate('verifyRsaToken', async <T>(token: string): Promise<T> => {
+		if (verifyOptions == null) {
+			throw new Error('Verify options are not provided')
+		}
 		const { iss } = jose.decodeJwt(token)
 
 		if (iss == null) {
@@ -142,7 +158,7 @@ const jwksPlugin: FastifyPluginAsync<{
 		let jwksStore = fastify.jwksStores[iss]
 
 		if (jwksStore == null) {
-			if (authorizedIssuers == null || !authorizedIssuers.includes(iss)) {
+			if (verifyOptions.authorizedIssuers == null || !verifyOptions.authorizedIssuers.includes(iss)) {
 				throw new Error(`Unauthorized issuer: ${iss}`)
 			}
 			jwksStore = jose.createRemoteJWKSet(
@@ -152,7 +168,7 @@ const jwksPlugin: FastifyPluginAsync<{
 		}
 
 		const { payload } = await jose.jwtVerify(token, jwksStore, {
-			audience: aud
+			audience: verifyOptions.selfAudience,
 		})
 		return payload as T
 	})

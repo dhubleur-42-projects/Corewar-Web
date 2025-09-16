@@ -6,6 +6,7 @@ import authRoutes from './routes/auth/auth'
 import jwtPlugin from '@fastify/jwt'
 import cookiePlugin from '@fastify/cookie'
 import authPlugin from './plugins/auth'
+import securityPlugin, { makeSecureMethod } from './plugins/security'
 import transactionPlugin from './plugins/transaction'
 import corsPlugin from '@fastify/cors'
 import { initQueues } from './async/queues/queues'
@@ -60,6 +61,15 @@ const connection: RedisOptions = {
 	await app.register(authPlugin)
 	getLogger().debug('Registered Auth plugin')
 
+	await app.register(securityPlugin)
+	app.addHook("onRegister", (childInstance) => {
+		childInstance.decorate("secureGet", makeSecureMethod(childInstance, "get"))
+		childInstance.decorate("securePost", makeSecureMethod(childInstance, "post"))
+		childInstance.decorate("securePut", makeSecureMethod(childInstance, "put"))
+		childInstance.decorate("secureDelete", makeSecureMethod(childInstance, "delete"))
+	})
+	getLogger().debug('Registered Security plugin')
+
 	await app.register(bullMqPlugin, {
 		redisOptions: connection,
 		redisPrefix: config.redisPrefix,
@@ -74,12 +84,16 @@ const connection: RedisOptions = {
 
 	await app.register(jwksPlugin, {
 		redisOptions: connection,
-		privateKeyValidityTime: config.privateKetValidityTime,
-		publicKeyValidityTime: config.privateKetValidityTime * 2,
-		authorizedIssuers: config.authorizedIssuers,
-		issuer: config.jwtIssuer,
 		redisPrefix: config.redisPrefix,
-		aud: config.jwtIssuer,
+		signOptions: {
+			privateKeyValidityTime: config.privateKeyValidityTime,
+			publicKeyValidityTime: config.privateKeyValidityTime * 2,
+			issuer: config.jwtIssuer,
+		},
+		verifyOptions: {
+			authorizedIssuers: config.authorizedIssuers,
+			selfAudience: config.jwtIssuer,
+		}
 	})
 	getLogger().debug('Registered JWKS plugin')
 
@@ -94,6 +108,7 @@ const connection: RedisOptions = {
 	})
 	getLogger().debug('Registered /health route')
 
+	getLogger().debug("Routes tree:\n" + app.printRoutes())
 	try {
 		await app.listen({ port: 3000, host: '0.0.0.0' })
 		getLogger().info(`Server listening on port ${config.port}`)
