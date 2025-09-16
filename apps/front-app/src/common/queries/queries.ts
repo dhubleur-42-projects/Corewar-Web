@@ -22,7 +22,18 @@ const handleError = (error: unknown) => {
 	}
 
 	if (error instanceof HttpError && error.status >= 500) {
-		toast.error('An error occurred while fetching data')
+		toast.error('An error occurred while processing your request')
+		return
+	}
+
+	if (error instanceof HttpError && error.status === 404) {
+		toast.error('Resource not found')
+		return
+	}
+
+	if (error instanceof HttpError && error.status === 403) {
+		toast.error('You do not have permission to access this resource')
+		return
 	}
 }
 
