@@ -29,15 +29,14 @@ function Callback() {
 
 	const { mutate: exchangeTokeMutate } = useExchangeToken()
 
-	const user = useStore((state) => state.user)
-	const setUser = useStore((state) => state.setUser)
+	const { user, isUserFromCache, setUser } = useStore()
 
 	useEffect(() => {
-		if (user != null) {
+		if (user != null && !isUserFromCache) {
 			navigate('/dashboard/home', { replace: true })
 			return
 		}
-	}, [user, navigate])
+	}, [user, navigate, isUserFromCache])
 
 	useEffect(() => {
 		const code = searchParams.get('code')
