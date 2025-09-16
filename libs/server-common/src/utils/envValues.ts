@@ -82,7 +82,7 @@ class EnvValues {
 						`The environment variable ${key} must be a string.`,
 					)
 				}
-				return value.split(separator).map((item) => item.trim()) as T[]
+				return value.split(separator).map((item) => item.trim()).filter(item => item !== '') as T[]
 			},
 		}
 	}
