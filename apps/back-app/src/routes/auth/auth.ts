@@ -146,8 +146,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 		}),
 	})
 
-	fastify.get('/me', {
-		preHandler: fastify.authenticate,
+	fastify.secureGet('/me', {
 		handler: fastify.withTransaction(async (request, reply) => {
 			const user = await request.transaction.user.findUnique({
 				where: { id: request.userId },
@@ -167,8 +166,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 		}),
 	})
 
-	fastify.post('/logout', {
-		preHandler: fastify.authenticate,
+	fastify.securePost('/logout', {
 		handler: fastify.withTransaction(async (request, reply) => {
 			const { userId } = request
 

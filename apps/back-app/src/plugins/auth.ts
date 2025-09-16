@@ -138,7 +138,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 			}
 		}
 
-		return reply.status(401)
+		return reply.status(401).send()
 	})
 }
 
