@@ -176,8 +176,8 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				where: { userId },
 			})
 
-			reply.clearCookie(config.accessTokenCookieName)
-			reply.clearCookie(config.rememberMeCookieName)
+			reply.clearCookie(config.accessTokenCookieName, config.cookieConfig)
+			reply.clearCookie(config.rememberMeCookieName, config.cookieConfig)
 			reply.status(200).send({ message: 'Logout successful' })
 		}),
 	})
