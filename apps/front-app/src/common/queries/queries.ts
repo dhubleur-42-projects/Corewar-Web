@@ -21,18 +21,13 @@ const handleError = (error: unknown) => {
 		return
 	}
 
+	if (error instanceof HttpError && error.getError() != null) {
+		toast.error(error.getError())
+		return
+	}
+
 	if (error instanceof HttpError && error.status >= 500) {
 		toast.error('An error occurred while processing your request')
-		return
-	}
-
-	if (error instanceof HttpError && error.status === 404) {
-		toast.error('Resource not found')
-		return
-	}
-
-	if (error instanceof HttpError && error.status === 403) {
-		toast.error('You do not have permission to access this resource')
 		return
 	}
 }
@@ -70,9 +65,15 @@ const fetchApi = (url: string, options?: RequestInit) => {
 type FetchApiOptions = RequestInit | ((...args: any[]) => RequestInit)
 
 class HttpError extends Error {
-	constructor(public status: number, message: string) {
+	private error?: string
+	constructor(public status: number, message: string, error?: string) {
 		super(message)
 		this.name = 'HttpError'
+		this.error = error
+	}
+
+	getError() {
+		return this.error
 	}
 }
 
@@ -88,7 +89,10 @@ export const generateFetchApi = <Args extends any[], T>(
 		if (!response.ok) {
 			throw new HttpError(
 				response.status,
-				`Erreur HTTP ${response.status}`,
+				`Error ${response.status}`,
+				response.headers.get('Content-Type')?.includes('application/json')
+					? (await response.json()).error
+					: undefined,
 			)
 		}
 		return response.json() as Promise<T>

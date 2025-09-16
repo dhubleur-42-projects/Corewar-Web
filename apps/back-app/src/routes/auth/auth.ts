@@ -64,7 +64,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 					status: userRes.status,
 					statusText: userRes.statusText,
 				})
-				reply.code(500).send({ error: 'Failed to fetch user info' })
+				reply.code(500).send({ error: 'Failed to authenticate' })
 				return
 			}
 
@@ -78,7 +78,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
 			if (id == null || login == null) {
 				logger.debug('Invalid user info received', { id, login })
-				reply.code(500).send({ error: 'Invalid user info received' })
+				reply.code(500).send({ error: 'Failed to authenticate' })
 				return
 			}
 			logger.debug(`User authenticated from 42: ${login} (${id})`)
