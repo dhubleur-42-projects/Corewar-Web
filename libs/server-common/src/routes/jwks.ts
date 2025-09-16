@@ -8,7 +8,7 @@ const jwksRoutes: FastifyPluginAsync = async (fastify) => {
 		) as KeyStore
 
 		reply.status(200).send({
-			keys: currentKeys.keys.map((key) => ({
+			keys: currentKeys.keys.filter(key => key.validity > Date.now()).map((key) => ({
 				kid: key.kid,
 				...key.key,
 			})),
