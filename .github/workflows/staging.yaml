@@ -1,4 +1,4 @@
-name: Staging update
+name: Staging workflow
 
 env:
     PNPM_VERSION: '10.12.4'
