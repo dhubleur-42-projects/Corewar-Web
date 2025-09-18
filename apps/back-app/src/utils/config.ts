@@ -45,9 +45,6 @@ const config = {
 		httpOnly: true,
 		sameSite: 'lax' as const,
 		secure: isSslEnv,
-		...(isSslEnv
-			? { domain: envValues.get('COOKIE_DOMAIN').asString() }
-			: {}),
 		path: '/',
 		withCredentials: true,
 	},
