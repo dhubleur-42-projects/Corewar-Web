@@ -213,8 +213,8 @@ jobs:
 
                   > Note: The environment will be automatically deleted when the MR is closed
 
-    delete-mr-namespace:
-        name: Delete MR Namespace
+    delete-mr-environment:
+        name: Delete MR environment
         if: ${{ github.event.action == 'closed' }}
 
         runs-on: ubuntu-24.04
@@ -222,6 +222,9 @@ jobs:
         steps:
             - name: Checkout
               uses: actions/checkout@v4
+
+            - name: Install jq
+              run: sudo apt-get update && sudo apt-get install -y jq curl
 
             - name: Set up kubeconfig
               run: |
@@ -231,6 +234,117 @@ jobs:
             - name: Delete MR Namespace
               run: |
                   kubectl delete namespace corewar-mr-${{ github.event.pull_request.number }} --ignore-not-found --insecure-skip-tls-verify
+
+            - name: List back-app tags
+              id: list-back-tags
+              run: |
+                IMAGE="corewar/back-app"
+                TAG_PREFIX=mr-${{ github.event.pull_request.number }}-
+                echo "Listing tags starting with $TAG_PREFIX..."
+                TAGS=$(curl -s -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                  "https://registry.ozyria.fr/v2/$IMAGE/tags/list" \
+                  | jq -r '.tags[] | select(startswith("'$TAG_PREFIX'"))' | paste -sd "," -)
+                echo "tags=$TAGS" >> $GITHUB_OUTPUT
+                echo "Found tags: $TAGS"
+
+            - name: Delete back-app tags
+              if: steps.list-back-tags.outputs.tags != ''
+              run: |
+                IMAGE="corewar/back-app"
+                TAGS="${{ steps.list-back-tags.outputs.tags }}"
+                
+                IFS=',' read -ra TAG_ARRAY <<< "$TAGS"
+                
+                for TAG in "${TAG_ARRAY[@]}"; do
+                  echo "Deleting $TAG..."
+                  
+                  DIGEST=$(curl -s -I -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                    -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                    "https://registry.ozyria.fr/v2/$IMAGE/manifests/$TAG" \
+                    | grep docker-content-digest | awk '{print $2}' | tr -d $'\r')
+                  
+                  if [ -n "$DIGEST" ]; then
+                    curl -s -X DELETE -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                      "https://registry.ozyria.fr/v2/$IMAGE/manifests/$DIGEST"
+                    echo "Deleted $TAG ($DIGEST)"
+                  else
+                    echo "Could not find digest for $TAG, skipping..."
+                  fi
+                done
+
+            - name: List migrate-job tags
+              id: list-migrate-tags
+              run: |
+                IMAGE="corewar/migrate-job"
+                TAG_PREFIX=mr-${{ github.event.pull_request.number }}-
+                echo "Listing tags starting with $TAG_PREFIX..."
+                TAGS=$(curl -s -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                  "https://registry.ozyria.fr/v2/$IMAGE/tags/list" \
+                  | jq -r '.tags[] | select(startswith("'$TAG_PREFIX'"))' | paste -sd "," -)
+                echo "tags=$TAGS" >> $GITHUB_OUTPUT
+                echo "Found tags: $TAGS"
+
+            - name: Delete migrate-job tags
+              if: steps.list-migrate-tags.outputs.tags != ''
+              run: |
+                IMAGE="corewar/migrate-job"
+                TAGS="${{ steps.list-migrate-tags.outputs.tags }}"
+
+                IFS=',' read -ra TAG_ARRAY <<< "$TAGS"
+                
+                for TAG in "${TAG_ARRAY[@]}"; do
+                  echo "Deleting $TAG..."
+                  
+                  DIGEST=$(curl -s -I -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                    -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                    "https://registry.ozyria.fr/v2/$IMAGE/manifests/$TAG" \
+                    | grep docker-content-digest | awk '{print $2}' | tr -d $'\r')
+                  
+                  if [ -n "$DIGEST" ]; then
+                    curl -s -X DELETE -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                      "https://registry.ozyria.fr/v2/$IMAGE/manifests/$DIGEST"
+                    echo "Deleted $TAG ($DIGEST)"
+                  else
+                    echo "Could not find digest for $TAG, skipping..."
+                  fi
+                done
+
+            - name: List front-app tags
+              id: list-front-tags
+              run: |
+                IMAGE="corewar/front-app"
+                TAG_PREFIX=mr-${{ github.event.pull_request.number }}-
+                echo "Listing tags starting with $TAG_PREFIX..."
+                TAGS=$(curl -s -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                  "https://registry.ozyria.fr/v2/$IMAGE/tags/list" \
+                  | jq -r '.tags[] | select(startswith("'$TAG_PREFIX'"))' | paste -sd "," -)
+                echo "tags=$TAGS" >> $GITHUB_OUTPUT
+                echo "Found tags: $TAGS"
+
+            - name: Delete front-app tags
+              if: steps.list-front-tags.outputs.tags != ''
+              run: |
+                IMAGE="corewar/front-app"
+                TAGS="${{ steps.list-front-tags.outputs.tags }}"
+
+                IFS=',' read -ra TAG_ARRAY <<< "$TAGS"
+                
+                for TAG in "${TAG_ARRAY[@]}"; do
+                  echo "Deleting $TAG..."
+                  
+                  DIGEST=$(curl -s -I -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                    -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                    "https://registry.ozyria.fr/v2/$IMAGE/manifests/$TAG" \
+                    | grep docker-content-digest | awk '{print $2}' | tr -d $'\r')
+                  
+                  if [ -n "$DIGEST" ]; then
+                    curl -s -X DELETE -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                      "https://registry.ozyria.fr/v2/$IMAGE/manifests/$DIGEST"
+                    echo "Deleted $TAG ($DIGEST)"
+                  else
+                    echo "Could not find digest for $TAG, skipping..."
+                  fi
+                done
 
             - name: Comment MR with cleanup info
               uses: mshick/add-pr-comment@v2
