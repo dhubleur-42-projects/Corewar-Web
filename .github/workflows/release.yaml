@@ -128,3 +128,9 @@ jobs:
       - name: Deploy
         run: |
             ./infra/deploy_prod.sh ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ steps.next_version.outputs.next_version }}
+
+      - name: Send Discord notification
+        run: |
+          curl -H "Content-Type: application/json" \
+              -d "{\"content\": \"🚀 **PROD** Deployment Info\n\nVersion \`${{ steps.next_version.outputs.next_version }}\` has been deployed to the **production environment**.\n\n- Frontend: \`https://corewar.ozyria.fr\`\n- Backend: \`https://corewar-api.ozyria.fr\`\"}" \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
