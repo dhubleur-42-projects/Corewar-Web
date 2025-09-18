@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-migration
+  namespace: corewar-mr-{{MR_ID}}
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        job-name: db-migration
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: onorahubleur/corewar-migrate-job:mr-{{MR_ID}}-{{COMMIT_SHA}}
+          envFrom:
+            - configMapRef:
+                name: back-app-config

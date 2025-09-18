@@ -47,7 +47,7 @@ jobs:
           while read -r line; do
             if [[ "$line" == *"BREAKING CHANGE"* ]] || [[ "$line" == *"!:"* ]]; then
               HAS_MAJOR=1
-            elif [[ "$line" == feat* ]]; then
+            elif [[ "$line" == feat* ]] || [[ "$line" == chore* ]] || [[ "$line" == perf* ]]; then
               HAS_MINOR=1
             else
               HAS_PATCH=1
@@ -105,6 +105,20 @@ jobs:
             tags: |
                 onorahubleur/corewar-back-app:release-latest
                 onorahubleur/corewar-back-app:release-${{ steps.next_version.outputs.next_version }}
+
+      - name: Build and push migration job image
+        uses: docker/build-push-action@v6
+        with:
+            context: ./
+            file: ./Dockerfile
+            push: true
+            target: migrate
+            platforms: linux/amd64
+            build-args: |
+                ENVIRONMENT=prod
+            tags: |
+                onorahubleur/corewar-migrate-job:release-latest
+                onorahubleur/corewar-migrate-job:release-${{ steps.next_version.outputs.next_version }}
 
       - name: Build and push front-app image
         uses: docker/build-push-action@v6
