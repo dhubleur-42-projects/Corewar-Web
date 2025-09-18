@@ -17,6 +17,17 @@ data:
   tls.key: <base64-encoded-key>
 ---
 
+# create docker registry secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ozyria-registry-secret
+  namespace: corewar-staging
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: <base64-encoded-docker-config>
+---
+
 # create data-credentials secret
 apiVersion: v1
 kind: Secret

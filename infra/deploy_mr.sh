@@ -10,12 +10,20 @@ API_CLIENT_SECRET=$3
 BASE64_ENCODED_CERT=$4
 BASE64_ENCODED_KEY=$5
 COMMIT_SHA=$6
-if [ -z "$MR_ID" ] || [ -z "$API_CLIENT_ID" ] || [ -z "$API_CLIENT_SECRET" ] || [ -z "$BASE64_ENCODED_CERT" ] || [ -z "$BASE64_ENCODED_KEY" ] || [ -z "$COMMIT_SHA" ]; then
-  echo "Usage: $0 <MR_ID> <API_CLIENT_ID> <API_CLIENT_SECRET> <BASE64_ENCODED_CERT> <BASE64_ENCODED_KEY> <COMMIT_SHA>"
+DOCKER_USERNAME=$7
+DOCKER_PASSWORD=$8
+if [ -z "$MR_ID" ] || [ -z "$API_CLIENT_ID" ] || [ -z "$API_CLIENT_SECRET" ] || [ -z "$BASE64_ENCODED_CERT" ] || [ -z "$BASE64_ENCODED_KEY" ] || [ -z "$COMMIT_SHA" ] || [ -z "$DOCKER_USERNAME" ] || [ -z "$DOCKER_PASSWORD" ]; then
+  echo "Usage: $0 <MR_ID> <API_CLIENT_ID> <API_CLIENT_SECRET> <BASE64_ENCODED_CERT> <BASE64_ENCODED_KEY> <COMMIT_SHA> <DOCKER_USERNAME> <DOCKER_PASSWORD>"
   exit 1
 fi
 
 kubectl create namespace corewar-mr-${MR_ID} --insecure-skip-tls-verify --dry-run=client -o yaml | kubectl apply --insecure-skip-tls-verify -f -
+
+kubectl -n corewar-mr-${MR_ID} create secret docker-registry ozyria-registry-secret \
+  --docker-server=registry.ozyria.fr \
+  --docker-username=${DOCKER_USERNAME} \
+  --docker-password=${DOCKER_PASSWORD} \
+  -- insecure-skip-tls-verify --dry-run=client -o yaml | kubectl apply --insecure-skip-tls-verify -f -
 
 POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr '/+=' '_-' | cut -c1-32)
 REDIS_PASSWORD=$(openssl rand -base64 32 | tr '/+=' '_-' | cut -c1-32)
