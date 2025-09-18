@@ -106,6 +106,20 @@ jobs:
                 onorahubleur/corewar-back-app:release-latest
                 onorahubleur/corewar-back-app:release-${{ steps.next_version.outputs.next_version }}
 
+      - name: Build and push migration job image
+        uses: docker/build-push-action@v6
+        with:
+            context: ./
+            file: ./Dockerfile
+            push: true
+            target: migrate
+            platforms: linux/amd64
+            build-args: |
+                ENVIRONMENT=prod
+            tags: |
+                onorahubleur/corewar-migrate-job:release-latest
+                onorahubleur/corewar-migrate-job:release-${{ steps.next_version.outputs.next_version }}
+
       - name: Build and push front-app image
         uses: docker/build-push-action@v6
         with:

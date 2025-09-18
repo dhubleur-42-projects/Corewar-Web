@@ -30,7 +30,7 @@ sed -i "s/{{JWT_SECRET}}/${JWT_SECRET}/g" /tmp/back-app.env
 
 kubectl create configmap back-app-config --from-env-file=/tmp/back-app.env -n corewar-prod --insecure-skip-tls-verify --dry-run=client -o yaml | kubectl apply --insecure-skip-tls-verify -f -
 
-MANIFESTS=(01-back.yaml 02-front.yaml)
+MANIFESTS=(01-migration.yaml 02-back.yaml 03-front.yaml)
 declare -A DEPLOYMENTS
 DEPLOYMENTS["01-back.yaml"]="back-app"
 DEPLOYMENTS["02-front.yaml"]="front-app"
@@ -40,6 +40,15 @@ for manifest in "${MANIFESTS[@]}"; do
   sed -i "s/{{VERSION}}/${VERSION}/g" /tmp/${manifest}
   echo "Applying manifest ${manifest}..."
   kubectl apply -f /tmp/${manifest} -n corewar-prod --insecure-skip-tls-verify --validate=false
+
+  if [[ "$manifest" == "01-migration.yaml" ]]; then
+    kubectl wait -n corewar-prod --for=condition=complete job/db-migration --timeout=300s --insecure-skip-tls-verify || kubectl wait -n corewar-prod --for=condition=failed job/db-migration --timeout=300s --insecure-skip-tls-verify
+    POD=$(kubectl get pod -n corewar-prod -l job-name=db-migration -o jsonpath='{.items[0].metadata.name}' --insecure-skip-tls-verify)
+    echo ====== Migration job logs ======
+    kubectl logs $POD -n corewar-prod --insecure-skip-tls-verify
+    echo ================================
+    kubectl delete job db-migration -n corewar-prod --insecure-skip-tls-verify
+  fi
 
   if [[ -n "${DEPLOYMENTS[$manifest]}" ]]; then
     for deploy in ${DEPLOYMENTS[$manifest]//,/ }; do

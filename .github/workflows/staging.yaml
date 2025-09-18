@@ -131,7 +131,6 @@ jobs:
               run: echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
 
             - name: Build and push back-app image
-              id: push
               uses: docker/build-push-action@v6
               with:
                   context: ./
@@ -144,6 +143,20 @@ jobs:
                   tags: |
                       onorahubleur/corewar-back-app:staging-latest
                       onorahubleur/corewar-back-app:staging-${{ steps.vars.outputs.sha_short }}
+
+            - name: Build and push migration job image
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./
+                  file: ./Dockerfile
+                  push: true
+                  target: migrate
+                  platforms: linux/amd64
+                  build-args: |
+                      ENVIRONMENT=staging
+                  tags: |
+                      onorahubleur/corewar-migrate-job:staging-latest
+                      onorahubleur/corewar-migrate-job:staging-${{ steps.vars.outputs.sha_short }}
 
             - name: Build and push front-app image
               uses: docker/build-push-action@v6
