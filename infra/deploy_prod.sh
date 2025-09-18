@@ -32,8 +32,8 @@ kubectl create configmap back-app-config --from-env-file=/tmp/back-app.env -n co
 
 MANIFESTS=(01-migration.yaml 02-back.yaml 03-front.yaml)
 declare -A DEPLOYMENTS
-DEPLOYMENTS["01-back.yaml"]="back-app"
-DEPLOYMENTS["02-front.yaml"]="front-app"
+DEPLOYMENTS["02-back.yaml"]="back-app"
+DEPLOYMENTS["03-front.yaml"]="front-app"
 
 for manifest in "${MANIFESTS[@]}"; do
   cp ${WDIR}/manifests/prod/${manifest} /tmp/${manifest}
