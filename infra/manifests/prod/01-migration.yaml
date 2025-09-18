@@ -13,7 +13,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: onorahubleur/corewar-migrate-job:release-{{VERSION}}}
+          image: onorahubleur/corewar-migrate-job:release-{{VERSION}}
           envFrom:
             - configMapRef:
                 name: back-app-config
