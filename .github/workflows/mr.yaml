@@ -133,7 +133,6 @@ jobs:
               run: echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
 
             - name: Build and push back-app image
-              id: push
               uses: docker/build-push-action@v6
               with:
                   context: ./
@@ -147,6 +146,21 @@ jobs:
                   tags: |
                       onorahubleur/corewar-back-app:mr-${{ github.event.pull_request.number }}-latest
                       onorahubleur/corewar-back-app:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
+
+            - name: Build and push migration job image
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./
+                  file: ./Dockerfile
+                  push: true
+                  target: migrate
+                  platforms: linux/amd64
+                  build-args: |
+                      MR_ID=${{ github.event.pull_request.number }}
+                      ENVIRONMENT=mr
+                  tags: |
+                      onorahubleur/corewar-migrate-job:mr-${{ github.event.pull_request.number }}-latest
+                      onorahubleur/corewar-migrate-job:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
 
             - name: Build and push front-app image
               uses: docker/build-push-action@v6

@@ -42,11 +42,11 @@ sed -i "s/{{REDIS_PASSWORD}}/${REDIS_PASSWORD}/g" /tmp/back-app.env
 sed -i "s/{{JWT_SECRET}}/${JWT_SECRET}/g" /tmp/back-app.env
 kubectl create configmap back-app-config --from-env-file=/tmp/back-app.env -n corewar-mr-${MR_ID} --insecure-skip-tls-verify --dry-run=client -o yaml | kubectl apply --insecure-skip-tls-verify -f -
 
-MANIFESTS=(01-utils.yaml 02-back.yaml 03-front.yaml 04-ingress.yaml)
+MANIFESTS=(01-utils.yaml 02-migration.yaml 03-back.yaml 04-front.yaml 05-ingress.yaml)
 declare -A DEPLOYMENTS
 DEPLOYMENTS["01-utils.yaml"]="postgres,redis"
-DEPLOYMENTS["02-back.yaml"]="back-app"
-DEPLOYMENTS["03-front.yaml"]="front-app"
+DEPLOYMENTS["03-back.yaml"]="back-app"
+DEPLOYMENTS["04-front.yaml"]="front-app"
 
 for manifest in "${MANIFESTS[@]}"; do
   cp ${WDIR}/manifests/mr/${manifest} /tmp/${manifest}
@@ -58,11 +58,18 @@ for manifest in "${MANIFESTS[@]}"; do
   echo "Applying manifest ${manifest}..."
   kubectl apply -f /tmp/${manifest} -n corewar-mr-${MR_ID} --insecure-skip-tls-verify --validate=false
 
+  if [[ "$manifest" == "02-migration.yaml" ]]; then
+    kubectl wait -n corewar-mr-${MR_ID} --for=condition=complete job/db-migration --timeout=300s --insecure-skip-tls-verify || kubectl wait -n corewar-mr-${MR_ID} --for=condition=failed job/db-migration --timeout=300s --insecure-skip-tls-verify
+    POD=$(kubectl get pod -n corewar-mr-${MR_ID} -l job-name=db-migration -o jsonpath='{.items[0].metadata.name}' --insecure-skip-tls-verify)
+    echo ====== Migration job logs ======
+    kubectl logs $POD -n corewar-mr-${MR_ID} --insecure-skip-tls-verify
+    echo ================================
+    kubectl delete job db-migration -n corewar-mr-${MR_ID} --insecure-skip-tls-verify
+  fi
+
   if [[ -n "${DEPLOYMENTS[$manifest]}" ]]; then
     for deploy in ${DEPLOYMENTS[$manifest]//,/ }; do
-      echo "Waiting for deployment $deploy to be ready..."
       kubectl rollout status deployment/$deploy -n corewar-mr-${MR_ID} --insecure-skip-tls-verify --timeout=180s
-      echo "Deployment $deploy is ready."
     done
   fi
 done
