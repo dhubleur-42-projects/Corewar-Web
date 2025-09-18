@@ -10,10 +10,12 @@ spec:
       labels:
         job-name: db-migration
     spec:
+      imagePullSecrets:
+        - name: ozyria-registry-secret
       restartPolicy: Never
       containers:
         - name: migrate
-          image: onorahubleur/corewar-migrate-job:mr-{{MR_ID}}-{{COMMIT_SHA}}
+          image: registry.ozyria.fr/corewar/migrate-job:mr-{{MR_ID}}-{{COMMIT_SHA}}
           envFrom:
             - configMapRef:
                 name: back-app-config
