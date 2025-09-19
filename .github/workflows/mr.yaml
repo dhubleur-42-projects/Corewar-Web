@@ -122,9 +122,10 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Log in to Docker Hub
+            - name: Log in to Docker Registry
               uses: docker/login-action@v3
               with:
+                  registry: registry.ozyria.fr
                   username: ${{ secrets.DOCKER_USERNAME }}
                   password: ${{ secrets.DOCKER_PASSWORD }}
 
@@ -144,8 +145,8 @@ jobs:
                       MR_ID=${{ github.event.pull_request.number }}
                       ENVIRONMENT=mr
                   tags: |
-                      onorahubleur/corewar-back-app:mr-${{ github.event.pull_request.number }}-latest
-                      onorahubleur/corewar-back-app:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
+                      registry.ozyria.fr/corewar/back-app:mr-${{ github.event.pull_request.number }}-latest
+                      registry.ozyria.fr/corewar/back-app:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
 
             - name: Build and push migration job image
               uses: docker/build-push-action@v6
@@ -159,8 +160,8 @@ jobs:
                       MR_ID=${{ github.event.pull_request.number }}
                       ENVIRONMENT=mr
                   tags: |
-                      onorahubleur/corewar-migrate-job:mr-${{ github.event.pull_request.number }}-latest
-                      onorahubleur/corewar-migrate-job:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
+                      registry.ozyria.fr/corewar/migrate-job:mr-${{ github.event.pull_request.number }}-latest
+                      registry.ozyria.fr/corewar/migrate-job:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
 
             - name: Build and push front-app image
               uses: docker/build-push-action@v6
@@ -174,8 +175,8 @@ jobs:
                       MR_ID=${{ github.event.pull_request.number }}
                       ENVIRONMENT=mr
                   tags: |
-                      onorahubleur/corewar-front-app:mr-${{ github.event.pull_request.number }}-latest
-                      onorahubleur/corewar-front-app:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
+                      registry.ozyria.fr/corewar/front-app:mr-${{ github.event.pull_request.number }}-latest
+                      registry.ozyria.fr/corewar/front-app:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
 
     deploy:
         name: Deploy to Kubernetes
@@ -196,7 +197,7 @@ jobs:
 
             - name: Deploy
               run: |
-                  ./infra/deploy_mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ secrets.TLS_CERT }} ${{ secrets.TLS_KEY }} ${{ steps.vars.outputs.sha_short }}
+                  ./infra/deploy_mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ secrets.TLS_CERT }} ${{ secrets.TLS_KEY }} ${{ steps.vars.outputs.sha_short }} ${{ secrets.DOCKER_USERNAME }} ${{ secrets.DOCKER_PASSWORD }}
 
             - name: Comment MR with deployment info
               uses: mshick/add-pr-comment@v2
@@ -212,8 +213,62 @@ jobs:
 
                   > Note: The environment will be automatically deleted when the MR is closed
 
-    delete-mr-namespace:
-        name: Delete MR Namespace
+    clean-old-images:
+        name: Clean old MR images
+        needs: build
+        runs-on: ubuntu-24.04
+        strategy:
+          matrix:
+            image:
+              - back-app
+              - migrate-job
+              - front-app
+        steps:
+          - name: List ${{ matrix.image }} tags
+            id: list-tags
+            run: |
+              IMAGE="corewar/${{ matrix.image }}"
+              TAG_PREFIX=mr-${{ github.event.pull_request.number }}-
+              echo "Listing tags starting with $TAG_PREFIX..."
+              TAGS=$(curl -s -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                "https://registry.ozyria.fr/v2/$IMAGE/tags/list" \
+                | jq -r '.tags[] | select(startswith("'$TAG_PREFIX'"))' | paste -sd "," -)
+              echo "tags=$TAGS" >> $GITHUB_OUTPUT
+              echo "Found tags: $TAGS"
+
+          - name: Delete old ${{ matrix.image }} tags
+            if: steps.list-tags.outputs.tags != ''
+            run: |
+              IMAGE="corewar/${{ matrix.image }}"
+              TAGS="${{ steps.list-tags.outputs.tags }}"
+
+              IFS=',' read -ra TAG_ARRAY <<< "$TAGS"
+                
+              for TAG in "${TAG_ARRAY[@]}"; do
+                CREATED=$(curl -s -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                  "https://registry.ozyria.fr/v2/$IMAGE/manifests/$TAG" \
+                  | jq -r '.history[0].v1Compatibility | fromjson.created' 2>/dev/null || echo "1970-01-01T00:00:00Z")
+                echo "$CREATED $TAG"
+              done | sort -r | tee sorted_tags.txt
+
+              tail -n +10 sorted_tags.txt | while read CREATED TAG; do
+                echo "Deleting old tag $TAG ($CREATED)..."
+                DIGEST=$(curl -s -I -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                  -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                  "https://registry.ozyria.fr/v2/$IMAGE/manifests/$TAG" \
+                  | grep docker-content-digest | awk '{print $2}' | tr -d $'\r')
+
+                if [ -n "$DIGEST" ]; then
+                  curl -s -X DELETE -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                    "https://registry.ozyria.fr/v2/$IMAGE/manifests/$DIGEST"
+                  echo "Deleted $TAG ($DIGEST)"
+                else
+                  echo "Skipping $TAG, could not resolve digest."
+                fi
+              done
+
+    delete-mr-environment:
+        name: Delete MR environment
         if: ${{ github.event.action == 'closed' }}
 
         runs-on: ubuntu-24.04
@@ -239,3 +294,51 @@ jobs:
                   🗑️ Cleanup Info
 
                   The temporary environment for this MR has been deleted.
+
+    delete-mr-images:
+        name: Delete MR images
+        needs: delete-mr-environment
+        runs-on: ubuntu-24.04
+        strategy:
+          matrix:
+            image:
+              - back-app
+              - migrate-job
+              - front-app
+        steps:
+          - name: List ${{ matrix.image }} tags
+            id: list-tags
+            run: |
+              IMAGE="corewar/${{ matrix.image }}"
+              TAG_PREFIX=mr-${{ github.event.pull_request.number }}-
+              echo "Listing tags starting with $TAG_PREFIX..."
+              TAGS=$(curl -s -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                "https://registry.ozyria.fr/v2/$IMAGE/tags/list" \
+                | jq -r '.tags[] | select(startswith("'$TAG_PREFIX'"))' | paste -sd "," -)
+              echo "tags=$TAGS" >> $GITHUB_OUTPUT
+              echo "Found tags: $TAGS"
+
+          - name: Delete ${{ matrix.image }} tags
+            if: steps.list-tags.outputs.tags != ''
+            run: |
+              IMAGE="corewar/${{ matrix.image }}"
+              TAGS="${{ steps.list-tags.outputs.tags }}"
+
+              IFS=',' read -ra TAG_ARRAY <<< "$TAGS"
+              
+              for TAG in "${TAG_ARRAY[@]}"; do
+                echo "Deleting $TAG..."
+                
+                DIGEST=$(curl -s -I -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                  -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                  "https://registry.ozyria.fr/v2/$IMAGE/manifests/$TAG" \
+                  | grep docker-content-digest | awk '{print $2}' | tr -d $'\r')
+                
+                if [ -n "$DIGEST" ]; then
+                  curl -s -X DELETE -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                    "https://registry.ozyria.fr/v2/$IMAGE/manifests/$DIGEST"
+                  echo "Deleted $TAG ($DIGEST)"
+                else
+                  echo "Could not find digest for $TAG, skipping..."
+                fi
+              done

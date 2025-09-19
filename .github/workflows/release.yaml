@@ -86,11 +86,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Log in to Docker Hub
+      - name: Log in to Docker Registry
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+            registry: registry.ozyria.fr
+            username: ${{ secrets.DOCKER_USERNAME }}
+            password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push back-app image
         uses: docker/build-push-action@v6
@@ -103,8 +104,8 @@ jobs:
             build-args: |
                 ENVIRONMENT=prod
             tags: |
-                onorahubleur/corewar-back-app:release-latest
-                onorahubleur/corewar-back-app:release-${{ steps.next_version.outputs.next_version }}
+                registry.ozyria.fr/corewar/back-app:release-latest
+                registry.ozyria.fr/corewar/back-app:release-${{ steps.next_version.outputs.next_version }}
 
       - name: Build and push migration job image
         uses: docker/build-push-action@v6
@@ -117,8 +118,8 @@ jobs:
             build-args: |
                 ENVIRONMENT=prod
             tags: |
-                onorahubleur/corewar-migrate-job:release-latest
-                onorahubleur/corewar-migrate-job:release-${{ steps.next_version.outputs.next_version }}
+                registry.ozyria.fr/corewar/migrate-job:release-latest
+                registry.ozyria.fr/corewar/migrate-job:release-${{ steps.next_version.outputs.next_version }}
 
       - name: Build and push front-app image
         uses: docker/build-push-action@v6
@@ -131,8 +132,8 @@ jobs:
             build-args: |
                 ENVIRONMENT=prod
             tags: |
-                onorahubleur/corewar-front-app:release-latest
-                onorahubleur/corewar-front-app:release-${{ steps.next_version.outputs.next_version }}
+                registry.ozyria.fr/corewar/front-app:release-latest
+                registry.ozyria.fr/corewar/front-app:release-${{ steps.next_version.outputs.next_version }}
 
       - name: Set up kubeconfig
         run: |
@@ -148,3 +149,57 @@ jobs:
           curl -H "Content-Type: application/json" \
               -d "{\"content\": \"🚀 **PROD** Deployment Info\n\nVersion \`${{ steps.next_version.outputs.next_version }}\` has been deployed to the **production environment**.\n\n- Frontend: \`https://corewar.ozyria.fr\`\n- Backend: \`https://corewar-api.ozyria.fr\`\"}" \
               ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+  clean-old-images:
+    name: Clean old release images
+    needs: release
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        image:
+          - back-app
+          - migrate-job
+          - front-app
+    steps:
+      - name: List ${{ matrix.image }} tags
+        id: list-tags
+        run: |
+          IMAGE="corewar/${{ matrix.image }}"
+          TAG_PREFIX=release-
+          echo "Listing tags starting with $TAG_PREFIX..."
+          TAGS=$(curl -s -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+            "https://registry.ozyria.fr/v2/$IMAGE/tags/list" \
+            | jq -r '.tags[] | select(startswith("'$TAG_PREFIX'"))' | paste -sd "," -)
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          echo "Found tags: $TAGS"
+
+      - name: Delete old ${{ matrix.image }} tags
+        if: steps.list-tags.outputs.tags != ''
+        run: |
+          IMAGE="corewar/${{ matrix.image }}"
+          TAGS="${{ steps.list-tags.outputs.tags }}"
+
+          IFS=',' read -ra TAG_ARRAY <<< "$TAGS"
+            
+          for TAG in "${TAG_ARRAY[@]}"; do
+            CREATED=$(curl -s -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+              "https://registry.ozyria.fr/v2/$IMAGE/manifests/$TAG" \
+              | jq -r '.history[0].v1Compatibility | fromjson.created' 2>/dev/null || echo "1970-01-01T00:00:00Z")
+            echo "$CREATED $TAG"
+          done | sort -r | tee sorted_tags.txt
+
+          tail -n +10 sorted_tags.txt | while read CREATED TAG; do
+            echo "Deleting old tag $TAG ($CREATED)..."
+            DIGEST=$(curl -s -I -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+              -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+              "https://registry.ozyria.fr/v2/$IMAGE/manifests/$TAG" \
+              | grep docker-content-digest | awk '{print $2}' | tr -d $'\r')
+
+            if [ -n "$DIGEST" ]; then
+              curl -s -X DELETE -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
+                "https://registry.ozyria.fr/v2/$IMAGE/manifests/$DIGEST"
+              echo "Deleted $TAG ($DIGEST)"
+            else
+              echo "Skipping $TAG, could not resolve digest."
+            fi
+          done
