@@ -19,9 +19,11 @@ spec:
       labels:
         app: front-app
     spec:
+      imagePullSecrets:
+        - name: ozyria-registry-secret
       containers:
         - name: front-app
-          image: onorahubleur/corewar-front-app:staging-{{COMMIT_SHA}}
+          image: registry.ozyria.fr/corewar/front-app:staging-{{COMMIT_SHA}}
           imagePullPolicy: Always
           ports:
             - containerPort: 80

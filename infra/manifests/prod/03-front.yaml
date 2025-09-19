@@ -19,9 +19,11 @@ spec:
       labels:
         app: front-app
     spec:
+      imagePullSecrets:
+        - name: ozyria-registry-secret
       containers:
         - name: front-app
-          image: onorahubleur/corewar-front-app:release-{{VERSION}}
+          image: registry.ozyria.fr/corewar/front-app:release-{{VERSION}}
           imagePullPolicy: Always
           ports:
             - containerPort: 80

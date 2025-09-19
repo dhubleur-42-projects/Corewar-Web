@@ -19,9 +19,11 @@ spec:
       labels:
         app: back-app
     spec:
+      imagePullSecrets:
+        - name: ozyria-registry-secret
       containers:
         - name: back-app
-          image: onorahubleur/corewar-back-app:release-{{VERSION}}
+          image: registry.ozyria.fr/corewar/back-app:release-{{VERSION}}
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
