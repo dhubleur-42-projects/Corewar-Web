@@ -2,6 +2,7 @@ import { getSubLogger } from 'server-common'
 import { ExecCallbackResultType, ExecQueueData } from '../async/execQueue'
 import { FastifyInstance } from 'fastify'
 import { execCallbackSocket, execCallbackWebhook } from './execCallback'
+import { ExecType } from '../plugins/exec'
 
 export async function processExecRequest(
 	data: ExecQueueData,
@@ -13,8 +14,15 @@ export async function processExecRequest(
 	// Simulate some processing
 	await new Promise((resolve) => setTimeout(resolve, 2000))
 	const stdout = 'Execution output'
-	const stderr = ''
-	const exitCode = 0
+	let stderr = ''
+	let exitCode = 0
+	if (
+		data.request.type === ExecType.COMPILER &&
+		data.request.code.includes('error')
+	) {
+		stderr = 'Compilation error'
+		exitCode = 1
+	}
 
 	logger.info(`Job ${data.jobId} completed, sending callback`)
 
