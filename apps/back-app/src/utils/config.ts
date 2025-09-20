@@ -5,10 +5,7 @@ import { EnvValues } from 'server-common'
 
 const envValues = new EnvValues()
 
-const isSslEnv = envValues
-	.get('IS_SSL')
-	.default('false')
-	.asBoolean()
+const isSslEnv = envValues.get('IS_SSL').default('false').asBoolean()
 
 const config = {
 	port: envValues.get('PORT').default('3000').asNumber(),
@@ -49,19 +46,24 @@ const config = {
 		withCredentials: true,
 	},
 	isProd: envValues.get('IS_PROD').default('false').asBoolean(),
-	loginsWhitelist: envValues.get('LOGINS_WHITELIST').default('').asArray<string>(),
+	loginsWhitelist: envValues
+		.get('LOGINS_WHITELIST')
+		.default('')
+		.asArray<string>(),
 	redisHost: envValues.get('REDIS_HOST').asString(),
 	redisPort: envValues.get('REDIS_PORT').default('6379').asNumber(),
 	redisPassword: envValues.get('REDIS_PASSWORD').asString(),
-	redisPrefix: envValues
-		.get('REDIS_PREFIX')
-		.default('back-app')
-		.asString(),
+	redisPrefix: envValues.get('REDIS_PREFIX').default('back-app').asString(),
 	authorizedIssuers: envValues.get('AUTHORIZED_ISSUERS').asArray<string>(),
 	privateKeyValidityTime: envValues
 		.get('PRIVATE_KEY_VALIDITY')
-		.default('86400000')
+		.default('86400000') // 24 hours
 		.asNumber(),
+	execTokenValidity: envValues
+		.get('EXEC_TOKEN_VALIDITY')
+		.default('3600000') // 1 hour
+		.asNumber(),
+	execUrl: envValues.get('EXEC_URL').asString(),
 }
 
 export default config

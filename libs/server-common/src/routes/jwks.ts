@@ -4,14 +4,18 @@ import { KeyStore, publicKeysRedisKey } from '../plugins/jwks'
 const jwksRoutes: FastifyPluginAsync = async (fastify) => {
 	fastify.get('/.well-known/jwks.json', async (request, reply) => {
 		const currentKeys = JSON.parse(
-			(await fastify.jwksRedis.get(fastify.getRedisKey(publicKeysRedisKey))) || '{"keys": []}',
+			(await fastify.jwksRedis.get(
+				fastify.getRedisKey(publicKeysRedisKey),
+			)) || '{"keys": []}',
 		) as KeyStore
 
 		reply.status(200).send({
-			keys: currentKeys.keys.filter(key => key.validity > Date.now()).map((key) => ({
-				kid: key.kid,
-				...key.key,
-			})),
+			keys: currentKeys.keys
+				.filter((key) => key.validity > Date.now())
+				.map((key) => ({
+					kid: key.kid,
+					...key.key,
+				})),
 		})
 	})
 }

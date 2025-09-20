@@ -1,7 +1,11 @@
 import { Outlet, useNavigate } from 'react-router'
 import useStore from '../../common/store/store'
 import { useCallback, useEffect, useRef } from 'react'
-import { useFetchMe, useLogout, useResetFetchMe } from '../../common/queries/useAuthQueries'
+import {
+	useFetchMe,
+	useLogout,
+	useResetFetchMe,
+} from '../../common/queries/useAuthQueries'
 import { Button, styled } from '@mui/material'
 import { defineI18n, useTranslate } from '../../common/utils/i18n'
 

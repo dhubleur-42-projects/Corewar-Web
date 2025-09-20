@@ -33,9 +33,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 				})
 
 				if (!payload.userId) {
-					return reply
-						.status(401)
-						.send({ error: 'Invalid token' })
+					return reply.status(401).send({ error: 'Invalid token' })
 				}
 
 				const record = await fastify.prisma.user.findUnique({
@@ -59,13 +57,11 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 					rememberMeId: string
 				}>(rememberMeToken, {
 					allowedIss: config.jwtIssuer,
-					allowedAud: config.jwtIssuer
+					allowedAud: config.jwtIssuer,
 				})
 
 				if (!payload.rememberMeId) {
-					return reply
-						.status(401)
-						.send({ error: 'Invalid token' })
+					return reply.status(401).send({ error: 'Invalid token' })
 				}
 
 				const record = await fastify.prisma.rememberMe.findUnique({
@@ -73,9 +69,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 				})
 
 				if (record == null) {
-					return reply
-						.status(401)
-						.send({ error: 'Invalid token' })
+					return reply.status(401).send({ error: 'Invalid token' })
 				}
 
 				await addToRemoveUsedRememberMeQueue(record.id)
@@ -132,9 +126,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 				request.userId = record.userId
 				return
 			} catch (_) {
-				return reply
-					.status(401)
-					.send({ error: 'Invalid token' })
+				return reply.status(401).send({ error: 'Invalid token' })
 			}
 		}
 

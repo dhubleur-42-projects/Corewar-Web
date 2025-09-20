@@ -5,7 +5,7 @@ export enum LoggerLevel {
 	ERROR = 'ERROR',
 }
 
-class Logger {
+export class Logger {
 	private key: string
 	private level: LoggerLevel
 

@@ -2,11 +2,11 @@ import 'dotenv/config'
 
 interface EnvValuesFinalizer {
 	default: (defaultValue: string) => EnvValuesFinalizer
-		asString: () => string
-		asNumber: () => number
-		asBoolean: () => boolean
-		asEnum: <T extends Record<string, unknown>>(enumType: T) => T[keyof T]
-		asArray: <T>(separator?: string) => T[]
+	asString: () => string
+	asNumber: () => number
+	asBoolean: () => boolean
+	asEnum: <T extends Record<string, unknown>>(enumType: T) => T[keyof T]
+	asArray: <T>(separator?: string) => T[]
 }
 
 class EnvValues {
@@ -82,7 +82,10 @@ class EnvValues {
 						`The environment variable ${key} must be a string.`,
 					)
 				}
-				return value.split(separator).map((item) => item.trim()).filter(item => item !== '') as T[]
+				return value
+					.split(separator)
+					.map((item) => item.trim())
+					.filter((item) => item !== '') as T[]
 			},
 		}
 	}
