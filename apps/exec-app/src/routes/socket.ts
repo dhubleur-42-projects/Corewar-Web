@@ -1,19 +1,13 @@
 import { FastifyPluginAsync } from 'fastify'
 import { getLogger } from 'server-common'
-import { Socket } from 'socket.io'
 import { ExecRequest } from '../plugins/exec'
-
-const socketMap: Record<string, AuthenticatedSocket> = {}
-
-interface AuthenticatedSocket extends Socket {
-	userId: string
-}
+import { AuthenticatedSocket } from '../plugins/socket'
 
 interface ExecTokenPayload {
 	userId: string
 }
 
-const socketPlugin: FastifyPluginAsync = async (fastify) => {
+const socketRoute: FastifyPluginAsync = async (fastify) => {
 	fastify.io.use(async (socket, next) => {
 		const token = socket.handshake.auth.token
 		if (token == null) {
@@ -40,7 +34,7 @@ const socketPlugin: FastifyPluginAsync = async (fastify) => {
 		getLogger().debug(
 			`User ${authenticatedSocket.userId} connected with socket id: ${socket.id}`,
 		)
-		socketMap[socket.id] = authenticatedSocket
+		fastify.socketMap[socket.id] = authenticatedSocket
 
 		socket.on('exec', async (request: ExecRequest, callback) => {
 			getLogger().debug(
@@ -61,9 +55,9 @@ const socketPlugin: FastifyPluginAsync = async (fastify) => {
 			getLogger().debug(
 				`User ${authenticatedSocket.userId} disconnected with socket id: ${socket.id}`,
 			)
-			delete socketMap[socket.id]
+			delete fastify.socketMap[socket.id]
 		})
 	})
 }
 
-export default socketPlugin
+export default socketRoute

@@ -10,9 +10,10 @@ import {
 import Fastify from 'fastify'
 import corsPlugin from '@fastify/cors'
 import fastifySocketIO from 'fastify-socket.io'
-import socketPlugin from './routes/socket'
+import socketRoute from './routes/socket'
 import execPlugin from './plugins/exec'
 import execRoutes from './routes/exec'
+import socketPlugin from './plugins/socket'
 
 const connection: RedisOptions = {
 	host: config.redisHost,
@@ -86,13 +87,16 @@ const connection: RedisOptions = {
 	})
 	getLogger().debug('Registered Socket.IO plugin')
 
+	app.register(socketPlugin)
+	getLogger().debug('Registered internal socket plugin')
+
 	app.register(execPlugin)
 	getLogger().debug('Registered exec plugin')
 
 	await app.register(execRoutes, { prefix: '/exec' })
 	getLogger().debug('Registered /exec routes')
 
-	app.register(socketPlugin)
+	app.register(socketRoute)
 	getLogger().debug('Registered socket routes')
 
 	getLogger().debug('Routes tree:\n' + app.printRoutes())
