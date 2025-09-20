@@ -27,13 +27,17 @@ sed -i "s/{{API_CLIENT_SECRET}}/${API_CLIENT_SECRET}/g" /tmp/back-app.env
 sed -i "s/{{POSTGRES_PASSWORD}}/${POSTGRES_PASSWORD}/g" /tmp/back-app.env
 sed -i "s/{{REDIS_PASSWORD}}/${REDIS_PASSWORD}/g" /tmp/back-app.env
 sed -i "s/{{JWT_SECRET}}/${JWT_SECRET}/g" /tmp/back-app.env
-
 kubectl create configmap back-app-config --from-env-file=/tmp/back-app.env -n corewar-prod --insecure-skip-tls-verify --dry-run=client -o yaml | kubectl apply --insecure-skip-tls-verify -f -
 
-MANIFESTS=(01-migration.yaml 02-back.yaml 03-front.yaml)
+cp ${WDIR}/../apps/exec-app/envValues/.env.prod /tmp/exec-app.env
+sed -i "s/{{REDIS_PASSWORD}}/${REDIS_PASSWORD}/g" /tmp/exec-app.env
+kubectl create configmap exec-app-config --from-env-file=/tmp/exec-app.env -n corewar-prod --insecure-skip-tls-verify --dry-run=client -o yaml | kubectl apply --insecure-skip-tls-verify -f -
+
+MANIFESTS=(01-migration.yaml 02-exec.yaml 03-back.yaml 04-front.yaml)
 declare -A DEPLOYMENTS
-DEPLOYMENTS["02-back.yaml"]="back-app"
-DEPLOYMENTS["03-front.yaml"]="front-app"
+DEPLOYMENTS["02-exec.yaml"]="exec-app"
+DEPLOYMENTS["03-back.yaml"]="back-app"
+DEPLOYMENTS["04-front.yaml"]="front-app"
 
 for manifest in "${MANIFESTS[@]}"; do
   cp ${WDIR}/manifests/prod/${manifest} /tmp/${manifest}
