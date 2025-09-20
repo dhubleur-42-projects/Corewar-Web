@@ -56,6 +56,20 @@ spec:
   storageClassName: longhorn
 
 ---
+# create redis pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+  namespace: corewar-prod
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
 # create postgres deployment
 apiVersion: apps/v1
 kind: Deployment
@@ -113,6 +127,24 @@ spec:
       targetPort: 5432
   type: ClusterIP
   clusterIP: None
+
+---
+# create redis configmap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: corewar-prod
+data:
+  redis.conf: |
+    appendonly yes
+    appendfsync everysec
+
+    auto-aof-rewrite-percentage 100
+    auto-aof-rewrite-min-size 128mb
+
+    save 60 1000
+    save 300 10
   
 ---
 # create redis deployment
@@ -142,7 +174,26 @@ spec:
                 secretKeyRef:
                   name: data-credentials
                   key: redis-password
-          args: ["--requirepass", "<redis-password>"]
+          args:
+            - "redis-server"
+            - "/usr/local/etc/redis/redis.conf"
+            - "--requirepass"
+            - "<redis-password>"
+          volumeMounts:
+            - name: redis-config
+              mountPath: /usr/local/etc/redis/
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-config
+          configMap:
+            name: redis-config
+            items:
+              - key: redis.conf
+                path: redis.conf
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-data
 
 ---
 # create redis service
@@ -160,6 +211,61 @@ spec:
       targetPort: 6379
   type: ClusterIP
   clusterIP: None
+
+---
+# create exec-app deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: exec-app
+  namespace: corewar-prod
+spec:
+  selector:
+    matchLabels:
+      app: exec-app
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: exec-app
+    spec:
+      imagePullSecrets:
+        - name: ozyria-registry-secret
+      containers:
+        - name: exec-app
+          image: registry.ozyria.fr/corewar/exec-app:release-0.0.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: exec-app-config
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 2
+            periodSeconds: 5
+
+---
+# create exec-app service
+apiVersion: v1
+kind: Service
+metadata:
+  name: exec-app
+  namespace: corewar-prod
+spec:
+  selector:
+    app: exec-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
 
 ---
 # create back-app deployment
@@ -285,6 +391,7 @@ spec:
         - hosts:
               - corewar.ozyria.fr
               - corewar-api.ozyria.fr
+              - corewar-exec.ozyria.fr
           secretName: ozyria-tls
     rules:
         - host: corewar.ozyria.fr
@@ -305,5 +412,15 @@ spec:
                     backend:
                         service:
                             name: back-app
+                            port:
+                                number: 80
+        - host: corewar-exec.ozyria.fr
+          http:
+              paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                        service:
+                            name: exec-app
                             port:
                                 number: 80

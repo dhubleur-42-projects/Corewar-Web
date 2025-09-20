@@ -110,7 +110,7 @@ const connection: RedisOptions = {
 
 	getLogger().debug("Routes tree:\n" + app.printRoutes())
 	try {
-		await app.listen({ port: 3000, host: '0.0.0.0' })
+		await app.listen({ port: config.port, host: '0.0.0.0' })
 		getLogger().info(`Server listening on port ${config.port}`)
 	} catch (err) {
 		getLogger().error(`Error starting server`, err)
