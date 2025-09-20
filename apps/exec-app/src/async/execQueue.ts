@@ -4,6 +4,7 @@ import { createQueue, getLogger } from 'server-common'
 import { getQueue, getQueueAdder } from 'server-common/dist/async/queues'
 import config from '../utils/config'
 import { processExecRequest } from '../execLogic/execEntrypoint'
+import { AuthenticatedSocket } from '../plugins/socket'
 
 export enum ExecPriority {
 	HIGH = 1,
@@ -78,4 +79,19 @@ export async function addToExecQueue(
 		},
 	)
 	return ExecRequestResult.QUEUED
+}
+
+export async function removeFromQueue(socket: AuthenticatedSocket) {
+	const queue = getQueue('exec')
+	if (queue == null) {
+		getLogger().error('Exec queue is not initialized')
+		return
+	}
+	const job = await queue.getJob(`user-${socket.userId}`)
+	if (job != null) {
+		await job.remove()
+		getLogger().debug(
+			`Removed job user-${socket.userId} from queue due to socket disconnect`,
+		)
+	}
 }

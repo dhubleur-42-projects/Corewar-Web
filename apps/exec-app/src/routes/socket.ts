@@ -2,6 +2,7 @@ import { FastifyPluginAsync } from 'fastify'
 import { getLogger } from 'server-common'
 import { ExecRequest } from '../plugins/exec'
 import { AuthenticatedSocket } from '../plugins/socket'
+import { removeFromQueue } from '../async/execQueue'
 
 interface ExecTokenPayload {
 	userId: string
@@ -59,6 +60,11 @@ const socketRoute: FastifyPluginAsync = async (fastify) => {
 			getLogger().debug(
 				`User ${authenticatedSocket.userId} disconnected with socket id: ${socket.id}`,
 			)
+			removeFromQueue(authenticatedSocket).catch((err) => {
+				getLogger().warn(
+					`Error removing job for user ${authenticatedSocket.userId} from queue: ${err}`,
+				)
+			})
 			delete fastify.socketMap[socket.id]
 		})
 	})
