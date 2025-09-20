@@ -230,6 +230,9 @@ importers:
       '@types/events':
         specifier: ^3.0.3
         version: 3.0.3
+      '@types/node':
+        specifier: ^24.0.10
+        version: 24.0.10
       '@types/react':
         specifier: ^19.1.8
         version: 19.1.8

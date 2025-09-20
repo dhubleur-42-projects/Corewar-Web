@@ -34,7 +34,13 @@ function TmpExample() {
 			disconnect()
 			removeResultListener('tmp-example')
 		}
-	}, [connect, disconnect])
+	}, [
+		connect,
+		disconnect,
+		registerResultListener,
+		removeResultListener,
+		resultListener,
+	])
 
 	const handleRun = async () => {
 		if (codeRef.current) {
@@ -68,7 +74,10 @@ function TmpExample() {
 		<div>
 			<input type="text" placeholder="Code" ref={codeRef} />
 			<button onClick={handleRun}>Run</button>
-			<p>If code contains "error", the run result will be an error</p>
+			<p>
+				If code contains &ldquo;error&ldquo;, the run result will be an
+				error
+			</p>
 		</div>
 	)
 }

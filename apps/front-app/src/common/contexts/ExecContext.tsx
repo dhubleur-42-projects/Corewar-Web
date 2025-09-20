@@ -4,6 +4,7 @@ import {
 	useContext,
 	useEffect,
 	useRef,
+	type ReactNode,
 } from 'react'
 import { jwtDecode } from 'jwt-decode'
 import { useExecToken } from '../queries/useExecQueries'
@@ -83,17 +84,15 @@ function getTokenExpirationDelayMs(token: string): number {
 	}
 }
 
-export function ExecContextProvider({
-	children,
-}: {
-	children: React.ReactNode
-}) {
+export function ExecContextProvider({ children }: { children: ReactNode }) {
 	const socketRef = useRef<Socket | null>(null)
 	const execTokenRef = useRef<string | null>(null)
 	const listenersMapRef = useRef<Map<string, (data: any) => void>>(new Map())
-	const pingIntervalIdRef = useRef<NodeJS.Timeout | null>(null)
-	const renewTimeoutIdRef = useRef<NodeJS.Timeout | null>(null)
-	const pingTimeoutIdRef = useRef<NodeJS.Timeout | null>(null)
+	const pingIntervalIdRef = useRef<ReturnType<typeof setInterval> | null>(
+		null,
+	)
+	const renewTimeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const pingTimeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const { mutateAsync: getNewToken } = useExecToken()
 
 	useEffect(() => {
