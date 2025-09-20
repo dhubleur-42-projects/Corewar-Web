@@ -8,7 +8,11 @@ import * as jose from 'jose'
 declare module 'fastify' {
 	interface FastifyInstance {
 		verifyRsaToken<T>(token: string): Promise<T>
-		signRsaToken<T extends jose.JWTPayload>(payload: T, expirationTime: number, aud: string[] | string): Promise<string>
+		signRsaToken<T extends jose.JWTPayload>(
+			payload: T,
+			expirationTime: number,
+			aud: string[] | string,
+		): Promise<string>
 		jwksStores: Record<string, jose.JWTVerifyGetKey>
 		jwksRedis: Redis
 		getRedisKey: (key: string) => string
@@ -53,7 +57,7 @@ const jwksPlugin: FastifyPluginAsync<{
 	if (redis === null) {
 		throw new Error('Redis connection failed')
 	}
-	
+
 	fastify.decorate('getRedisKey', (key: string) => {
 		return `${redisPrefix}:${key}`
 	})
@@ -75,7 +79,9 @@ const jwksPlugin: FastifyPluginAsync<{
 		const kid = randomUUID().toString()
 
 		const currentKeys = JSON.parse(
-			(await fastify.jwksRedis.get(fastify.getRedisKey(publicKeysRedisKey))) || '{"keys": []}',
+			(await fastify.jwksRedis.get(
+				fastify.getRedisKey(publicKeysRedisKey),
+			)) || '{"keys": []}',
 		) as KeyStore
 
 		currentKeys.keys.push({
@@ -111,12 +117,18 @@ const jwksPlugin: FastifyPluginAsync<{
 
 	fastify.decorate(
 		'signRsaToken',
-		async <T extends jose.JWTPayload>(payload: T, expirationTime: number, aud: string[] | string): Promise<string> => {
+		async <T extends jose.JWTPayload>(
+			payload: T,
+			expirationTime: number,
+			aud: string[] | string,
+		): Promise<string> => {
 			if (signOptions == null) {
 				throw new Error('Sign options are not provided')
 			}
 			const privateKeyData = JSON.parse(
-				(await fastify.jwksRedis.get(fastify.getRedisKey(privateKeyRedisKey))) || '{}',
+				(await fastify.jwksRedis.get(
+					fastify.getRedisKey(privateKeyRedisKey),
+				)) || '{}',
 			) as Key
 			if (
 				privateKeyData == null ||
@@ -158,7 +170,10 @@ const jwksPlugin: FastifyPluginAsync<{
 		let jwksStore = fastify.jwksStores[iss]
 
 		if (jwksStore == null) {
-			if (verifyOptions.authorizedIssuers == null || !verifyOptions.authorizedIssuers.includes(iss)) {
+			if (
+				verifyOptions.authorizedIssuers == null ||
+				!verifyOptions.authorizedIssuers.includes(iss)
+			) {
 				throw new Error(`Unauthorized issuer: ${iss}`)
 			}
 			jwksStore = jose.createRemoteJWKSet(

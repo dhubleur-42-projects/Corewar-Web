@@ -56,7 +56,7 @@ const fetchApi = (url: string, options?: RequestInit) => {
 			options?.body != null
 				? {
 						'Content-Type': 'application/json',
-				  }
+					}
 				: {},
 		...options,
 	})
@@ -66,7 +66,11 @@ type FetchApiOptions = RequestInit | ((...args: any[]) => RequestInit)
 
 class HttpError extends Error {
 	private error?: string
-	constructor(public status: number, message: string, error?: string) {
+	constructor(
+		public status: number,
+		message: string,
+		error?: string,
+	) {
 		super(message)
 		this.name = 'HttpError'
 		this.error = error
@@ -90,7 +94,9 @@ export const generateFetchApi = <Args extends any[], T>(
 			throw new HttpError(
 				response.status,
 				`Error ${response.status}`,
-				response.headers.get('Content-Type')?.includes('application/json')
+				response.headers
+					.get('Content-Type')
+					?.includes('application/json')
 					? (await response.json()).error
 					: undefined,
 			)

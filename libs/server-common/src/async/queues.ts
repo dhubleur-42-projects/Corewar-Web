@@ -1,10 +1,6 @@
 import { FastifyInstance } from 'fastify'
-import { Job, JobsOptions, Queue } from 'bullmq'
+import { Job, JobsOptions, Queue, WorkerOptions } from 'bullmq'
 import { getSubLogger } from '../utils/logger'
-
-export enum QueueName {
-	REMOVE_USED_REMEMBER_ME = 'removeUsedRememberMe',
-}
 
 export type QueueHandler<T> = (data: T) => Promise<void>
 export type QueueAdder<T> = (
@@ -19,22 +15,27 @@ const adders: Record<string, QueueAdder<any>> = {}
 
 export function createQueue<T>(
 	fastify: FastifyInstance,
-	name: QueueName,
+	name: string,
 	queueOption: JobsOptions,
 	handler: QueueHandler<T>,
+	workerOptions?: Partial<WorkerOptions>,
 ) {
 	const logger = getSubLogger('QUEUE')
 	const queue = fastify.createQueue<T>(name, queueOption)
 	queues[name] = queue
 
-	fastify.createWorker(name, async (job) => {
-		const typedJob = job as { data: T }
-		try {
-			await handler(typedJob.data)
-		} catch (error) {
-			logger.error(`Error processing job from queue ${name}:`, error)
-		}
-	})
+	fastify.createWorker(
+		name,
+		async (job) => {
+			const typedJob = job as { data: T }
+			try {
+				await handler(typedJob.data)
+			} catch (error) {
+				logger.error(`Error processing job from queue ${name}:`, error)
+			}
+		},
+		workerOptions,
+	)
 
 	const adder: QueueAdder<T> = async (data: T, opts?: JobsOptions) => {
 		if (!queues[name]) {
@@ -45,9 +46,16 @@ export function createQueue<T>(
 	adders[name] = adder
 }
 
-export function getQueueAdder<T>(name: QueueName): QueueAdder<T> {
+export function getQueueAdder<T>(name: string): QueueAdder<T> {
 	if (!adders[name]) {
 		throw new Error(`Adder for queue ${name} is not initialized`)
 	}
 	return adders[name] as QueueAdder<T>
+}
+
+export function getQueue(name: string): Queue {
+	if (!queues[name]) {
+		throw new Error(`Queue ${name} is not initialized`)
+	}
+	return queues[name]
 }

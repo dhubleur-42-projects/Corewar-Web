@@ -46,7 +46,7 @@ for manifest in "${MANIFESTS[@]}"; do
   kubectl apply -f /tmp/${manifest} -n corewar-staging --insecure-skip-tls-verify --validate=false
 
   if [[ "$manifest" == "01-migration.yaml" ]]; then
-    kubectl wait -n corewar-staging --for=condition=complete job/db-migration --timeout=300s --insecure-skip-tls-verify || kubectl wait -n corewar-staging --for=condition=failed job/db-migration --timeout=300s --insecure-skip-tls-verify
+    kubectl wait -n corewar-staging --for=condition=complete job/db-migration --timeout=300s --insecure-skip-tls-verify
     POD=$(kubectl get pod -n corewar-staging -l job-name=db-migration -o jsonpath='{.items[0].metadata.name}' --insecure-skip-tls-verify)
     echo ====== Migration job logs ======
     kubectl logs $POD -n corewar-staging --insecure-skip-tls-verify
