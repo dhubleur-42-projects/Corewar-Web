@@ -1,10 +1,16 @@
-import { RedisOptions } from "ioredis";
-import config from "./utils/config";
-import { bullMqPlugin, createLogger, getLogger, jwksPlugin, jwksRoutes } from "server-common";
+import { RedisOptions } from 'ioredis'
+import config from './utils/config'
+import {
+	bullMqPlugin,
+	createLogger,
+	getLogger,
+	jwksPlugin,
+	jwksRoutes,
+} from 'server-common'
 import Fastify from 'fastify'
 import corsPlugin from '@fastify/cors'
-import fastifySocketIO from "fastify-socket.io";
-import socketPlugin from "./socket/socket";
+import fastifySocketIO from 'fastify-socket.io'
+import socketPlugin from './socket/socket'
 
 const connection: RedisOptions = {
 	host: config.redisHost,
@@ -48,7 +54,7 @@ const connection: RedisOptions = {
 		verifyOptions: {
 			authorizedIssuers: config.authorizedIssuers,
 			selfAudience: config.jwtIssuer,
-		}
+		},
 	})
 	getLogger().debug('Registered JWKS plugin')
 
@@ -65,14 +71,14 @@ const connection: RedisOptions = {
 			origin: config.corsUrls,
 			methods: ['GET', 'POST'],
 			credentials: true,
-		}
-	});
+		},
+	})
 	getLogger().debug('Registered Socket.IO plugin')
 
-	app.register(socketPlugin);
+	app.register(socketPlugin)
 	getLogger().debug('Registered socket plugin')
 
-	getLogger().debug("Routes tree:\n" + app.printRoutes())
+	getLogger().debug('Routes tree:\n' + app.printRoutes())
 	try {
 		await app.listen({ port: config.port, host: '0.0.0.0' })
 		getLogger().info(`Server listening on port ${config.port}`)
@@ -81,4 +87,3 @@ const connection: RedisOptions = {
 		process.exit(1)
 	}
 })()
-

@@ -70,7 +70,10 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 
 			const { id, login } = await userRes.json()
 
-			if (config.loginsWhitelist.length > 0 && !config.loginsWhitelist.includes(login)) {
+			if (
+				config.loginsWhitelist.length > 0 &&
+				!config.loginsWhitelist.includes(login)
+			) {
 				logger.info(`Login not authorized: ${login}`)
 				reply.code(403).send({ error: 'Login not authorized' })
 				return

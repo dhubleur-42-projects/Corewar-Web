@@ -17,10 +17,7 @@ const config = {
 	redisHost: envValues.get('REDIS_HOST').asString(),
 	redisPort: envValues.get('REDIS_PORT').default('6379').asNumber(),
 	redisPassword: envValues.get('REDIS_PASSWORD').asString(),
-	redisPrefix: envValues
-		.get('REDIS_PREFIX')
-		.default('back-app')
-		.asString(),
+	redisPrefix: envValues.get('REDIS_PREFIX').default('back-app').asString(),
 	authorizedIssuers: envValues.get('AUTHORIZED_ISSUERS').asArray<string>(),
 	privateKeyValidityTime: envValues
 		.get('PRIVATE_KEY_VALIDITY')

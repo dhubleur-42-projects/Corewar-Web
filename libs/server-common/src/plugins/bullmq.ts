@@ -18,10 +18,10 @@ declare module 'fastify' {
 	}
 }
 
-const bullMqPlugin: FastifyPluginAsync<{ redisOptions: RedisOptions, redisPrefix: string }> = async (
-	fastify,
-	options
-) => {
+const bullMqPlugin: FastifyPluginAsync<{
+	redisOptions: RedisOptions
+	redisPrefix: string
+}> = async (fastify, options) => {
 	const { redisOptions, redisPrefix } = options
 	fastify.decorate('queues', new Map<string, Queue>())
 	fastify.decorate('workers', new Map<string, Worker>())
