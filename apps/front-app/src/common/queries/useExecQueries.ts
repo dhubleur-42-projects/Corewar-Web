@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { generateFetchApi } from './queries'
 
 interface ExecTokenResponse {
@@ -9,9 +9,10 @@ const fetchExecToken = generateFetchApi<[], ExecTokenResponse>('/exec/token', {
 	method: 'GET',
 })
 
-export const useFetchExecToken = () => {
-	return useQuery<ExecTokenResponse>({
-		queryKey: ['fetchExecToken'],
-		queryFn: fetchExecToken,
+export const useExecToken = () => {
+	const mutation = useMutation({
+		mutationFn: fetchExecToken,
 	})
+
+	return mutation
 }
