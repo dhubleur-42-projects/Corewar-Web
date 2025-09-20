@@ -152,19 +152,29 @@ export function ExecContextProvider({
 		if (execTokenRef.current == null) {
 			throw new Error('Failed to obtain exec token')
 		}
+
 		const socket = io(config.execUrl, {
 			auth: {
 				token: execTokenRef.current,
 			},
+			autoConnect: true,
+			reconnection: true,
+			reconnectionAttempts: 5,
+			reconnectionDelay: 2_000,
 		})
 		socket.on('connect_error', (err) => {
 			console.error('Socket connection error:', err.message)
-			socketRef.current = null
 		})
 		socket.on('disconnect', (reason) => {
 			console.warn('Socket disconnected:', reason)
-			socketRef.current = null
 		})
+		socket.on('connect', () => {
+			console.info('Socket connected')
+		})
+		socket.io.on('reconnect', async () => {
+			console.info('Socket reconnected')
+		})
+
 		socket.on('execResult', (result: ExecResult) => {
 			listenersMapRef.current.forEach((callback) => {
 				callback(result)
