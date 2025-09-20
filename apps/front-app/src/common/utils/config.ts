@@ -76,6 +76,7 @@ const config = {
 		.get('LOCALE_DEFAULT')
 		.default('en')
 		.asEnum(Language),
+	execUrl: envValues.get('EXEC_URL').asString(),
 }
 
 export default config

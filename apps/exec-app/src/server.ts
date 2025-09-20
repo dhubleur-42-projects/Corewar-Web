@@ -3,6 +3,8 @@ import config from "./utils/config";
 import { bullMqPlugin, createLogger, getLogger, jwksPlugin, jwksRoutes } from "server-common";
 import Fastify from 'fastify'
 import corsPlugin from '@fastify/cors'
+import fastifySocketIO from "fastify-socket.io";
+import socketPlugin from "./socket/socket";
 
 const connection: RedisOptions = {
 	host: config.redisHost,
@@ -57,6 +59,18 @@ const connection: RedisOptions = {
 		return { status: 'ok' }
 	})
 	getLogger().debug('Registered /health route')
+
+	await app.register(fastifySocketIO, {
+		cors: {
+			origin: config.corsUrls,
+			methods: ['GET', 'POST'],
+			credentials: true,
+		}
+	});
+	getLogger().debug('Registered Socket.IO plugin')
+
+	app.register(socketPlugin);
+	getLogger().debug('Registered socket plugin')
 
 	getLogger().debug("Routes tree:\n" + app.printRoutes())
 	try {
