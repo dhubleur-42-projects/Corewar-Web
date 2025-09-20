@@ -56,6 +56,20 @@ spec:
   storageClassName: longhorn
 
 ---
+# create redis pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data
+  namespace: corewar-prod
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+---
 # create postgres deployment
 apiVersion: apps/v1
 kind: Deployment
@@ -113,6 +127,24 @@ spec:
       targetPort: 5432
   type: ClusterIP
   clusterIP: None
+
+---
+# create redis configmap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: corewar-prod
+data:
+  redis.conf: |
+    appendonly yes
+    appendfsync everysec
+
+    auto-aof-rewrite-percentage 100
+    auto-aof-rewrite-min-size 128mb
+
+    save 60 1000
+    save 300 10
   
 ---
 # create redis deployment
@@ -142,7 +174,26 @@ spec:
                 secretKeyRef:
                   name: data-credentials
                   key: redis-password
-          args: ["--requirepass", "<redis-password>"]
+          args:
+            - "redis-server"
+            - "/usr/local/etc/redis/redis.conf"
+            - "--requirepass"
+            - "<redis-password>"
+          volumeMounts:
+            - name: redis-config
+              mountPath: /usr/local/etc/redis/
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-config
+          configMap:
+            name: redis-config
+            items:
+              - key: redis.conf
+                path: redis.conf
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-data
 
 ---
 # create redis service
