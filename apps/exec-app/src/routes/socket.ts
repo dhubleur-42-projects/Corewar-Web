@@ -36,6 +36,10 @@ const socketRoute: FastifyPluginAsync = async (fastify) => {
 		)
 		fastify.socketMap[socket.id] = authenticatedSocket
 
+		socket.on('ping', (_, callback) => {
+			callback('pong')
+		})
+
 		socket.on('exec', async (request: ExecRequest, callback) => {
 			getLogger().debug(
 				`Received exec request from user ${authenticatedSocket.userId}: ${JSON.stringify(

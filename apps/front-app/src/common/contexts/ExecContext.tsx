@@ -9,6 +9,7 @@ import { jwtDecode } from 'jwt-decode'
 import { useExecToken } from '../queries/useExecQueries'
 import { io, Socket } from 'socket.io-client'
 import config from '../utils/config'
+import { toast } from 'react-toastify'
 
 export enum ExecRequestResult {
 	QUEUED = 'queued',
@@ -92,12 +93,28 @@ export function ExecContextProvider({
 	const listenersMapRef = useRef<Map<string, (data: any) => void>>(new Map())
 	const pingIntervalIdRef = useRef<NodeJS.Timeout | null>(null)
 	const renewTimeoutIdRef = useRef<NodeJS.Timeout | null>(null)
+	const pingTimeoutIdRef = useRef<NodeJS.Timeout | null>(null)
 	const { mutateAsync: getNewToken } = useExecToken()
 
 	useEffect(() => {
 		pingIntervalIdRef.current = setInterval(() => {
 			if (socketRef.current != null && socketRef.current.connected) {
-				socketRef.current.emit('ping')
+				socketRef.current.emit('ping', {}, (response: string) => {
+					if (pingTimeoutIdRef.current != null) {
+						clearTimeout(pingTimeoutIdRef.current)
+						pingTimeoutIdRef.current = null
+					}
+					if (response !== 'pong') {
+						toast.error('Lost connection to exec server')
+						socketRef.current?.disconnect()
+						socketRef.current = null
+					}
+				})
+				pingTimeoutIdRef.current = setTimeout(() => {
+					toast.error('Lost connection to exec server')
+					socketRef.current?.disconnect()
+					socketRef.current = null
+				}, 5_000)
 			}
 		}, 30_000) // Ping every 30 seconds
 
@@ -212,7 +229,7 @@ export function ExecContextProvider({
 			)
 			setTimeout(() => {
 				reject(new ExecRequestTimeoutError())
-			}, 10000)
+			}, 10_000)
 		})
 	}, [])
 
