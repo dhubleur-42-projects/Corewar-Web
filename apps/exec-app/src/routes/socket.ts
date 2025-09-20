@@ -1,11 +1,26 @@
-import { FastifyPluginAsync } from 'fastify'
+import { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { getLogger } from 'server-common'
 import { ExecRequest } from '../plugins/exec'
 import { AuthenticatedSocket } from '../plugins/socket'
 import { removeFromQueue } from '../async/execQueue'
+import { Socket } from 'socket.io'
 
 interface ExecTokenPayload {
 	userId: string
+	exp: number
+}
+
+const socketExpirationMap: Record<string, ReturnType<typeof setTimeout>> = {}
+
+const expireSocket = (socket: Socket, fastify: FastifyInstance) => {
+	if (fastify.socketMap[socket.id] == null) {
+		return
+	}
+	getLogger().warn(`Expiring socket ${socket.id} due to inactivity`)
+	socket.emit('error', 'Socket expired due to inactivity')
+	socket.disconnect(true)
+	delete socketExpirationMap[socket.id]
+	delete fastify.socketMap[socket.id]
 }
 
 const socketRoute: FastifyPluginAsync = async (fastify) => {
@@ -22,6 +37,12 @@ const socketRoute: FastifyPluginAsync = async (fastify) => {
 					new Error('Authentication error: Invalid token payload'),
 				)
 			}
+			socketExpirationMap[socket.id] = setTimeout(
+				() => {
+					expireSocket(socket, fastify)
+				},
+				payload.exp * 1000 - Date.now(),
+			)
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			;(socket as any).userId = payload.userId
 			return next()
@@ -56,6 +77,41 @@ const socketRoute: FastifyPluginAsync = async (fastify) => {
 			})
 		})
 
+		socket.on(
+			'renewToken',
+			async (request: { token: string }, callback) => {
+				try {
+					const payload =
+						await fastify.verifyRsaToken<ExecTokenPayload>(
+							request.token,
+						)
+					if (!('userId' in payload)) {
+						socket.emit('error', 'Token renewal error')
+						return
+					}
+					if (payload.userId !== authenticatedSocket.userId) {
+						socket.emit('error', 'Token renewal error')
+						return
+					}
+					if (socketExpirationMap[socket.id]) {
+						clearTimeout(socketExpirationMap[socket.id])
+					}
+					socketExpirationMap[socket.id] = setTimeout(
+						() => {
+							expireSocket(socket, fastify)
+						},
+						payload.exp * 1000 - Date.now(),
+					)
+					callback({ success: true })
+				} catch (err) {
+					getLogger().warn(
+						`Error renewing token for user ${authenticatedSocket.userId}: ${err}`,
+					)
+					socket.emit('error', 'Token renewal error')
+				}
+			},
+		)
+
 		socket.on('disconnect', () => {
 			getLogger().debug(
 				`User ${authenticatedSocket.userId} disconnected with socket id: ${socket.id}`,
@@ -65,6 +121,10 @@ const socketRoute: FastifyPluginAsync = async (fastify) => {
 					`Error removing job for user ${authenticatedSocket.userId} from queue: ${err}`,
 				)
 			})
+			if (socketExpirationMap[socket.id]) {
+				clearTimeout(socketExpirationMap[socket.id])
+				delete socketExpirationMap[socket.id]
+			}
 			delete fastify.socketMap[socket.id]
 		})
 	})

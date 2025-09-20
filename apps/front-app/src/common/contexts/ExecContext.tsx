@@ -95,6 +95,17 @@ export function ExecContextProvider({ children }: { children: ReactNode }) {
 	const pingTimeoutIdRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const { mutateAsync: getNewToken } = useExecToken()
 
+	const disconnect = useCallback(() => {
+		if (socketRef.current != null) {
+			socketRef.current.disconnect()
+			socketRef.current = null
+		}
+		if (renewTimeoutIdRef.current != null) {
+			clearTimeout(renewTimeoutIdRef.current)
+			renewTimeoutIdRef.current = null
+		}
+	}, [])
+
 	useEffect(() => {
 		pingIntervalIdRef.current = setInterval(() => {
 			if (socketRef.current != null && socketRef.current.connected) {
@@ -105,14 +116,12 @@ export function ExecContextProvider({ children }: { children: ReactNode }) {
 					}
 					if (response !== 'pong') {
 						toast.error('Lost connection to exec server')
-						socketRef.current?.disconnect()
-						socketRef.current = null
+						disconnect()
 					}
 				})
 				pingTimeoutIdRef.current = setTimeout(() => {
 					toast.error('Lost connection to exec server')
-					socketRef.current?.disconnect()
-					socketRef.current = null
+					disconnect()
 				}, 5_000)
 			}
 		}, 30_000) // Ping every 30 seconds
@@ -125,7 +134,7 @@ export function ExecContextProvider({ children }: { children: ReactNode }) {
 				clearTimeout(renewTimeoutIdRef.current)
 			}
 		}
-	}, [])
+	}, [disconnect])
 
 	const renewToken = useCallback(async () => {
 		if (renewTimeoutIdRef.current != null) {
@@ -139,7 +148,16 @@ export function ExecContextProvider({ children }: { children: ReactNode }) {
 		}
 
 		if (socketRef.current != null && socketRef.current.connected) {
-			socketRef.current.emit('renewToken', { token: newToken })
+			socketRef.current.emit(
+				'renewToken',
+				{ token: newToken },
+				(response: { success: boolean }) => {
+					if (!response.success) {
+						toast.error('Failed to renew exec token, disconnecting')
+						disconnect()
+					}
+				},
+			)
 		}
 
 		renewTimeoutIdRef.current = setTimeout(
@@ -150,7 +168,7 @@ export function ExecContextProvider({ children }: { children: ReactNode }) {
 		)
 
 		execTokenRef.current = newToken
-	}, [getNewToken])
+	}, [getNewToken, disconnect])
 
 	const renewTokenIfNeeded = useCallback(async () => {
 		if (execTokenRef.current != null) {
@@ -190,6 +208,12 @@ export function ExecContextProvider({ children }: { children: ReactNode }) {
 		socket.io.on('reconnect', async () => {
 			console.info('Socket reconnected')
 		})
+		socket.on('error', (message: string) => {
+			toast.error(`Exec socket error: ${message}`)
+			if (socketRef.current != null && socketRef.current.connected) {
+				disconnect()
+			}
+		})
 
 		socket.on('execResult', (result: ExecResult) => {
 			listenersMapRef.current.forEach((callback) => {
@@ -197,18 +221,7 @@ export function ExecContextProvider({ children }: { children: ReactNode }) {
 			})
 		})
 		socketRef.current = socket
-	}, [renewTokenIfNeeded])
-
-	const disconnect = useCallback(() => {
-		if (socketRef.current != null) {
-			socketRef.current.disconnect()
-			socketRef.current = null
-		}
-		if (renewTimeoutIdRef.current != null) {
-			clearTimeout(renewTimeoutIdRef.current)
-			renewTimeoutIdRef.current = null
-		}
-	}, [])
+	}, [renewTokenIfNeeded, disconnect])
 
 	const runRequest = useCallback(async (code: string) => {
 		if (socketRef.current == null || !socketRef.current.connected) {
