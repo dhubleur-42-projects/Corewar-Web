@@ -52,3 +52,10 @@ export function getQueueAdder<T>(name: string): QueueAdder<T> {
 	}
 	return adders[name] as QueueAdder<T>
 }
+
+export function getQueue(name: string): Queue {
+	if (!queues[name]) {
+		throw new Error(`Queue ${name} is not initialized`)
+	}
+	return queues[name]
+}

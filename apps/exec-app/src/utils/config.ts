@@ -24,6 +24,10 @@ const config = {
 		.default('86400000')
 		.asNumber(),
 	corsUrls: envValues.get('CORS_URLS').asArray<string>(),
+	concurrencyLimit: envValues
+		.get('CONCURRENCY_LIMIT')
+		.default('5')
+		.asNumber(),
 }
 
 export default config

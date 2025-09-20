@@ -14,6 +14,7 @@ import socketRoute from './routes/socket'
 import execPlugin from './plugins/exec'
 import execRoutes from './routes/exec'
 import socketPlugin from './plugins/socket'
+import { initExecQueue } from './async/execQueue'
 
 const connection: RedisOptions = {
 	host: config.redisHost,
@@ -92,6 +93,9 @@ const connection: RedisOptions = {
 
 	app.register(execPlugin)
 	getLogger().debug('Registered exec plugin')
+
+	initExecQueue(app)
+	getLogger().debug('Initialized exec queue')
 
 	await app.register(execRoutes, { prefix: '/exec' })
 	getLogger().debug('Registered /exec routes')

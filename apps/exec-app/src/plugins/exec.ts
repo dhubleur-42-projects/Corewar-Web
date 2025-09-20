@@ -1,5 +1,11 @@
 import { FastifyPluginAsync } from 'fastify'
 import fp from 'fastify-plugin'
+import {
+	addToExecQueue,
+	ExecCallbackResultType,
+	ExecPriority,
+} from '../async/execQueue'
+import { AuthenticatedSocket } from './socket'
 
 export enum ExecType {
 	COMPILER = 'compiler',
@@ -26,7 +32,7 @@ declare module 'fastify' {
 	interface FastifyInstance {
 		handleSyncExecRequest(
 			request: ExecRequest,
-			socketId: string,
+			socket: AuthenticatedSocket,
 		): Promise<ExecRequestResult>
 		handleAsyncExecRequest(
 			request: ExecRequest,
@@ -37,13 +43,27 @@ declare module 'fastify' {
 }
 
 const execPlugin: FastifyPluginAsync = async (fastify) => {
-	fastify.decorate('handleSyncExecRequest', async (request, socketId) => {
-		return ExecRequestResult.ERROR
+	fastify.decorate('handleSyncExecRequest', async (request, socket) => {
+		return await addToExecQueue(
+			`user-${socket.userId}`,
+			request,
+			{ type: ExecCallbackResultType.SOCKET, socketId: socket.id },
+			ExecPriority.HIGH,
+		)
 	})
 	fastify.decorate(
 		'handleAsyncExecRequest',
 		async (request, requestId, callbackUrl) => {
-			return ExecRequestResult.ERROR
+			return await addToExecQueue(
+				`id-${requestId}`,
+				request,
+				{
+					type: ExecCallbackResultType.WEBHOOK,
+					callbackUrl,
+					requestId,
+				},
+				ExecPriority.LOW,
+			)
 		},
 	)
 }
