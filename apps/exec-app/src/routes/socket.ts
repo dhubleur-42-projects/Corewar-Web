@@ -1,8 +1,9 @@
 import { FastifyPluginAsync } from 'fastify'
 import { getLogger } from 'server-common'
 import { Socket } from 'socket.io'
+import { ExecRequest } from '../plugins/exec'
 
-const socketMap: Record<string, Socket> = {}
+const socketMap: Record<string, AuthenticatedSocket> = {}
 
 interface AuthenticatedSocket extends Socket {
 	userId: string
@@ -39,7 +40,22 @@ const socketPlugin: FastifyPluginAsync = async (fastify) => {
 		getLogger().debug(
 			`User ${authenticatedSocket.userId} connected with socket id: ${socket.id}`,
 		)
-		socketMap[socket.id] = socket
+		socketMap[socket.id] = authenticatedSocket
+
+		socket.on('exec', async (request: ExecRequest, callback) => {
+			getLogger().debug(
+				`Received exec request from user ${authenticatedSocket.userId}: ${JSON.stringify(
+					request,
+				)}`,
+			)
+			const result = await fastify.handleSyncExecRequest(
+				request,
+				socket.id,
+			)
+			callback({
+				result,
+			})
+		})
 
 		socket.on('disconnect', () => {
 			getLogger().debug(

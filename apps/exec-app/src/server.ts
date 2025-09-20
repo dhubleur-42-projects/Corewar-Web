@@ -10,7 +10,9 @@ import {
 import Fastify from 'fastify'
 import corsPlugin from '@fastify/cors'
 import fastifySocketIO from 'fastify-socket.io'
-import socketPlugin from './socket/socket'
+import socketPlugin from './routes/socket'
+import execPlugin from './plugins/exec'
+import execRoutes from './routes/exec'
 
 const connection: RedisOptions = {
 	host: config.redisHost,
@@ -24,11 +26,20 @@ const connection: RedisOptions = {
 	const app = Fastify()
 
 	app.setErrorHandler((error, request, reply) => {
-		getLogger().error(
-			`Error in request ${request.method} ${request.url}`,
-			error,
-		)
-		reply.status(500).send({ error: 'Internal Server Error' })
+		if (error.validation) {
+			reply.status(400).send({
+				statusCode: 400,
+				error: 'Bad Request',
+				message: 'Invalid request payload',
+				validation: error.validation,
+			})
+		} else {
+			getLogger().error(
+				`Error in request ${request.method} ${request.url}`,
+				error,
+			)
+			reply.status(500).send({ error: 'Internal Server Error' })
+		}
 	})
 
 	await app.register(corsPlugin, {
@@ -75,8 +86,14 @@ const connection: RedisOptions = {
 	})
 	getLogger().debug('Registered Socket.IO plugin')
 
+	app.register(execPlugin)
+	getLogger().debug('Registered exec plugin')
+
+	await app.register(execRoutes, { prefix: '/exec' })
+	getLogger().debug('Registered /exec routes')
+
 	app.register(socketPlugin)
-	getLogger().debug('Registered socket plugin')
+	getLogger().debug('Registered socket routes')
 
 	getLogger().debug('Routes tree:\n' + app.printRoutes())
 	try {

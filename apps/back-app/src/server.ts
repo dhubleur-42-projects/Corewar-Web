@@ -27,11 +27,20 @@ const connection: RedisOptions = {
 	const app = Fastify()
 
 	app.setErrorHandler((error, request, reply) => {
-		getLogger().error(
-			`Error in request ${request.method} ${request.url}`,
-			error,
-		)
-		reply.status(500).send({ error: 'Internal Server Error' })
+		if (error.validation) {
+			reply.status(400).send({
+				statusCode: 400,
+				error: 'Bad Request',
+				message: 'Invalid request payload',
+				validation: error.validation,
+			})
+		} else {
+			getLogger().error(
+				`Error in request ${request.method} ${request.url}`,
+				error,
+			)
+			reply.status(500).send({ error: 'Internal Server Error' })
+		}
 	})
 
 	await app.register(corsPlugin, {
@@ -125,6 +134,7 @@ const connection: RedisOptions = {
 	getLogger().debug('Registered /health route')
 
 	getLogger().debug('Routes tree:\n' + app.printRoutes())
+
 	try {
 		await app.listen({ port: config.port, host: '0.0.0.0' })
 		getLogger().info(`Server listening on port ${config.port}`)
