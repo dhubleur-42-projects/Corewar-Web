@@ -1,28 +1,32 @@
 {
 	"folders": [
 		{
-			"path": ".",
-			"name": "📁 Root directory"
+			"name": "📁 Root directory",
+			"path": "."
 		},
 		{
-			"path": "apps/back-app",
-			"name": "🖥 Back app"
+			"name": "🖥 Back app",
+			"path": "apps/back-app"
 		},
 		{
-			"path": "apps/front-app",
-			"name": "📱 Front app"
+			"name": "🧑‍💻 Exec app",
+			"path": "apps/exec-app"
 		},
 		{
-			"path": "libs/server-common",
-			"name": "📦 Server common lib"
+			"name": "📱 Front app",
+			"path": "apps/front-app"
 		},
 		{
-			"path": "infra",
-			"name": "🌐 Infra"
+			"name": "📦 Server common lib",
+			"path": "libs/server-common"
 		},
 		{
-			"path": ".github",
-			"name": "🐙 Github"
+			"name": "🌐 Infra",
+			"path": "infra"
+		},
+		{
+			"name": "🐙 Github",
+			"path": ".github"
 		}
 	]
 }

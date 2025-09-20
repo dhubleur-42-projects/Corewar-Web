@@ -48,3 +48,4 @@ In order to run the project, you can read projects' README files:
 
 -   [Front README](./apps/front-app/README.md)
 -   [Back README](./apps/back-app/README.md)
+-   [Exec README](./apps/exec-app/README.md)
