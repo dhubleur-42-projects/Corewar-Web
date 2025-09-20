@@ -7,7 +7,6 @@ interface ExecTokenPayload {
 }
 
 const execRoutes: FastifyPluginAsync = async (fastify) => {
-	console.log('execRoutes loaded')
 	fastify.post('/queue', {
 		schema: execQueueSchema,
 		preHandler: async (request, reply, done) => {

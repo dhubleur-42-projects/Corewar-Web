@@ -46,7 +46,6 @@ const socketRoute: FastifyPluginAsync = async (fastify) => {
 				request,
 				authenticatedSocket,
 			)
-			console.log('Exec result:', result)
 			callback({
 				result,
 			})
