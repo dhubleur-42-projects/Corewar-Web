@@ -12,6 +12,7 @@ RUN apk add --no-cache openssl libc6-compat
 COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
 COPY apps/back-app/package.json apps/back-app/
 COPY apps/front-app/package.json apps/front-app/
+COPY apps/exec-app/package.json apps/exec-app/
 COPY libs/server-common/package.json libs/server-common/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
@@ -32,6 +33,7 @@ WORKDIR /app
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm run -r build
 
 RUN pnpm deploy --filter=back-app --prod /prod/back-app
+RUN pnpm deploy --filter=exec-app --prod /prod/exec-app
 RUN pnpm deploy --filter=front-app --prod /prod/front-app
 
 FROM node:23-alpine AS back-app
@@ -50,6 +52,18 @@ CMD ["npm", "start"]
 FROM back-app AS migrate
 
 CMD ["npm", "run", "migrate:deploy"]
+
+FROM node:23-alpine AS exec-app
+WORKDIR /app
+
+RUN adduser -D app
+
+COPY --from=build --chown=app:app /prod/exec-app ./
+
+USER app
+EXPOSE 3000
+
+CMD ["npm", "start"]
 
 FROM nginx:1.27-alpine AS front-app
 
