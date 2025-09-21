@@ -49,7 +49,7 @@ EXPOSE 3000
 
 CMD ["npm", "start"]
 
-FROM back-app AS migrate
+FROM back-app AS migrate-job
 
 CMD ["npm", "run", "migrate:deploy"]
 

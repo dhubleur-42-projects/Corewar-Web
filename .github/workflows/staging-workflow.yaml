@@ -18,94 +18,60 @@ jobs:
         name: Lint
         uses: ./.github/workflows/lint.yaml
 
-    build:
-        name: Build apps
-        needs: lint
+    variables:
+        name: Store variables
 
         runs-on: ubuntu-24.04
+        outputs:
+            sha_short: ${{ steps.vars.outputs.sha_short }}
 
         steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-
-            - name: Log in to Docker Registry
-              uses: docker/login-action@v3
-              with:
-                  registry: registry.ozyria.fr
-                  username: ${{ secrets.DOCKER_USERNAME }}
-                  password: ${{ secrets.DOCKER_PASSWORD }}
-
             - name: Compute short SHA
               id: vars
               run: echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
 
-            - name: Build and push back-app image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: back-app
-                  platforms: linux/amd64
-                  build-args: |
-                      ENVIRONMENT=staging
-                  tags: |
-                      registry.ozyria.fr/corewar/back-app:staging-latest
-                      registry.ozyria.fr/corewar/back-app:staging-${{ steps.vars.outputs.sha_short }}
+    prepare-tags:
+        name: Prepare tags
+        needs:
+            - variables
+        runs-on: ubuntu-24.04
+        outputs:
+            tags: ${{ steps.set-tags.outputs.tags }}
+        steps:
+            - name: Compute tags
+              id: set-tags
+              run: |
+                  SHA=${{ needs.variables.outputs.sha_short }}
 
-            - name: Build and push migration job image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: migrate
-                  platforms: linux/amd64
-                  build-args: |
-                      ENVIRONMENT=staging
-                  tags: |
-                      registry.ozyria.fr/corewar/migrate-job:staging-latest
-                      registry.ozyria.fr/corewar/migrate-job:staging-${{ steps.vars.outputs.sha_short }}
+                  TAG_LIST="staging-latest staging-${SHA}"
 
-            - name: Build and push exec-app image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: exec-app
-                  platforms: linux/amd64
-                  build-args: |
-                      ENVIRONMENT=staging
-                  tags: |
-                      registry.ozyria.fr/corewar/exec-app:staging-latest
-                      registry.ozyria.fr/corewar/exec-app:staging-${{ steps.vars.outputs.sha_short }}
+                  echo "Tags: $TAG_LIST"
+                  echo "tags=$TAG_LIST" >> $GITHUB_OUTPUT
 
-            - name: Build and push front-app image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: front-app
-                  platforms: linux/amd64
-                  build-args: |
-                      ENVIRONMENT=staging
-                  tags: |
-                      registry.ozyria.fr/corewar/front-app:staging-latest
-                      registry.ozyria.fr/corewar/front-app:staging-${{ steps.vars.outputs.sha_short }}
+    build:
+        name: Build apps
+        needs:
+            - lint
+            - prepare-tags
+
+        uses: ./.github/workflows/build-images.yaml
+        with:
+            buildArgs: |
+                ENVIRONMENT=staging
+            tags: ${{ needs.prepare-tags.outputs.tags }}
+        secrets:
+            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+            DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
     deploy:
         name: Deploy to Kubernetes
-        needs: build
+        needs:
+            - variables
+            - build
         runs-on: ubuntu-24.04
         steps:
             - name: Checkout
               uses: actions/checkout@v4
-
-            - name: Compute short SHA
-              id: vars
-              run: echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
 
             - name: Set up kubeconfig
               run: |
@@ -114,7 +80,7 @@ jobs:
 
             - name: Deploy
               run: |
-                  ./infra/deploy_staging.sh ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ steps.vars.outputs.sha_short }}
+                  ./infra/deploy_staging.sh ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ needs.variables.outputs.sha_short }}
 
     comment-discord:
         name: Notify Discord with deployment info

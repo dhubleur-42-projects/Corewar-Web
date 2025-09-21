@@ -1,0 +1,34 @@
+name: Clean Docker build cache
+
+on:
+    schedule:
+        - cron: '0 2 * * *' # Every day at 2am
+    workflow_dispatch: {}
+
+jobs:
+    clean-build-cache:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Delete all tags in corewar/build-cache
+              run: |
+                  REPO="build-cache"
+                  NAMESPACE="corewar"
+                  echo "Processing repository: $NAMESPACE/$REPO"
+
+                  TAGS=$(curl -s -u "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}" \
+                    "https://registry.ozyria.fr/v2/$NAMESPACE/$REPO/tags/list" \
+                    | jq -r '.tags[]' || true)
+
+                  for tag in $TAGS; do
+                    echo "Deleting $NAMESPACE/$REPO:$tag"
+                    
+                    DIGEST=$(curl -s -I -u "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}" \
+                      -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                      "https://registry.ozyria.fr/v2/$NAMESPACE/$REPO/manifests/$tag" \
+                      | grep docker-content-digest | awk '{print $2}' | tr -d $'\r')
+                    
+                    if [ -n "$DIGEST" ]; then
+                      curl -X DELETE -u "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}" \
+                        "https://registry.ozyria.fr/v2/$NAMESPACE/$REPO/manifests/$DIGEST"
+                    fi
+                  done
