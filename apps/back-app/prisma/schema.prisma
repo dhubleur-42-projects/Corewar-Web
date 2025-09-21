@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "linux-arm64-openssl-3.0.x", "debian-openssl-3.0.x"]
 }
 
@@ -11,7 +11,7 @@ datasource db {
 model User {
   id       String @id @default(cuid())
   remoteId Int    @unique
-  login    String @unique
+  username String @unique
 
   RememberMe RememberMe[]
 }
