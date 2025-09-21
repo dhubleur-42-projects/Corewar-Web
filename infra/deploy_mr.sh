@@ -62,6 +62,8 @@ DEPLOYMENTS["03-exec.yaml"]="exec-app"
 DEPLOYMENTS["04-back.yaml"]="back-app"
 DEPLOYMENTS["05-front.yaml"]="front-app"
 
+kubectl delete job db-migration -n corewar-mr-${MR_ID} --insecure-skip-tls-verify --ignore-not-found
+
 for manifest in "${MANIFESTS[@]}"; do
   cp ${WDIR}/manifests/mr/${manifest} /tmp/${manifest}
   sed -i "s/{{MR_ID}}/${MR_ID}/g" /tmp/${manifest}
@@ -78,7 +80,6 @@ for manifest in "${MANIFESTS[@]}"; do
     echo ====== Migration job logs ======
     kubectl logs $POD -n corewar-mr-${MR_ID} --insecure-skip-tls-verify
     echo ================================
-    kubectl delete job db-migration -n corewar-mr-${MR_ID} --insecure-skip-tls-verify
   fi
 
   if [[ -n "${DEPLOYMENTS[$manifest]}" ]]; then
