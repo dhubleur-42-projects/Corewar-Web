@@ -4,7 +4,7 @@ const cachedUsedKey = 'cachedUser'
 
 interface User {
 	id: string
-	login: string
+	username: string
 }
 
 interface UserState {

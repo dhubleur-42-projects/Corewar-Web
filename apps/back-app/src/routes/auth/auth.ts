@@ -95,7 +95,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				user = await request.transaction.user.create({
 					data: {
 						remoteId: id,
-						login,
+						username: login,
 					},
 				})
 			}
@@ -143,7 +143,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				message: 'Authentication successful',
 				user: {
 					id: user.id,
-					login: user.login,
+					username: user.username,
 				},
 			})
 		}),
@@ -163,7 +163,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 			reply.status(200).send({
 				user: {
 					id: request.userId,
-					login: user.login,
+					username: user.username,
 				},
 			})
 		}),

@@ -16,7 +16,7 @@ const i18n = defineI18n({
 	},
 	fr: {
 		logout: 'Se déconnecter',
-		hello: 'Bonjour {{name}}',
+		hello: 'Bonjour {name}',
 	},
 })
 
@@ -95,7 +95,7 @@ function Dashboard() {
 	return (
 		<>
 			<Header>
-				<p>{translate(i18n.hello, { name: user?.login })}</p>
+				<p>{translate(i18n.hello, { name: user?.username })}</p>
 				<Button variant="contained" size="small" onClick={handleLogout}>
 					{translate(i18n.logout)}
 				</Button>

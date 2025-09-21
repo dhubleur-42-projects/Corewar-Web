@@ -19,7 +19,7 @@ export const useFetchAuthLink = () => {
 interface ExchangeTokenResponse {
 	user: {
 		id: string
-		login: string
+		username: string
 	}
 }
 

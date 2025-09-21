@@ -85,7 +85,7 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 						user: {
 							select: {
 								id: true,
-								login: true,
+								username: true,
 							},
 						},
 					},
