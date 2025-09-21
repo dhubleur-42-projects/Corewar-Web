@@ -133,54 +133,10 @@ jobs:
     clean-old-images:
         name: Clean old staging images
         needs: build
-        runs-on: ubuntu-24.04
-        strategy:
-            matrix:
-                image:
-                    - back-app
-                    - migrate-job
-                    - front-app
-                    - exec-app
-        steps:
-            - name: List ${{ matrix.image }} tags
-              id: list-tags
-              run: |
-                  IMAGE="corewar/${{ matrix.image }}"
-                  TAG_PREFIX=staging-
-                  echo "Listing tags starting with $TAG_PREFIX..."
-                  TAGS=$(curl -s -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
-                    "https://registry.ozyria.fr/v2/$IMAGE/tags/list" \
-                    | jq -r '.tags[] | select(startswith("'$TAG_PREFIX'"))' | paste -sd "," -)
-                  echo "tags=$TAGS" >> $GITHUB_OUTPUT
-                  echo "Found tags: $TAGS"
-
-            - name: Delete old ${{ matrix.image }} tags
-              if: steps.list-tags.outputs.tags != ''
-              run: |
-                  IMAGE="corewar/${{ matrix.image }}"
-                  TAGS="${{ steps.list-tags.outputs.tags }}"
-
-                  IFS=',' read -ra TAG_ARRAY <<< "$TAGS"
-                    
-                  for TAG in "${TAG_ARRAY[@]}"; do
-                    CREATED=$(curl -s -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
-                      "https://registry.ozyria.fr/v2/$IMAGE/manifests/$TAG" \
-                      | jq -r '.history[0].v1Compatibility | fromjson.created' 2>/dev/null || echo "1970-01-01T00:00:00Z")
-                    echo "$CREATED $TAG"
-                  done | sort -r | tee sorted_tags.txt
-
-                  tail -n +10 sorted_tags.txt | while read CREATED TAG; do
-                    echo "Deleting old tag $TAG ($CREATED)..."
-                    DIGEST=$(curl -s -I -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
-                      -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
-                      "https://registry.ozyria.fr/v2/$IMAGE/manifests/$TAG" \
-                      | grep docker-content-digest | awk '{print $2}' | tr -d $'\r')
-
-                    if [ -n "$DIGEST" ]; then
-                      curl -s -X DELETE -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
-                        "https://registry.ozyria.fr/v2/$IMAGE/manifests/$DIGEST"
-                      echo "Deleted $TAG ($DIGEST)"
-                    else
-                      echo "Skipping $TAG, could not resolve digest."
-                    fi
-                  done
+        uses: ./.github/workflows/clean-old-images.yaml
+        with:
+            tagPrefix: staging-
+            keepCount: 10
+        secrets:
+            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+            DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}

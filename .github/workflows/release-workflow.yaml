@@ -1,220 +1,176 @@
 name: Release workflow
 
 on:
-  workflow_dispatch:
+    workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}
+    group: ${{ github.workflow }}
 
 jobs:
-  release:
-    name: Release to production
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+    release:
+        name: Release to production
+        runs-on: ubuntu-24.04
+        steps:
+            - name: Checkout repo
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0 # Fetch all history for tags
+
+            - name: Get latest release tag
+              id: last_release
+              run: |
+                  TAG=$(git tag --sort=-creatordate | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
+                  if [ -z "$TAG" ]; then
+                    TAG="v0.0.0"
+                  fi
+                  echo "Found latest tag: $TAG"
+                  echo "last_tag=$TAG" >> $GITHUB_OUTPUT
+
+            - name: List commits since last release
+              id: commits
+              run: |
+                  COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"%s" --no-merges)
+                  echo "commits<<EOF" >> $GITHUB_OUTPUT
+                  echo "$COMMITS" >> $GITHUB_OUTPUT
+                  echo "EOF" >> $GITHUB_OUTPUT
+                  echo "Commits since $LAST_TAG:"
+                  echo "$COMMITS"
+              env:
+                  LAST_TAG: ${{ steps.last_release.outputs.last_tag }}
+
+            - name: Calculate next version
+              id: next_version
+              run: |
+                  HAS_MAJOR=0
+                  HAS_MINOR=0
+                  HAS_PATCH=0
+                  while read -r line; do
+                    if [[ "$line" == *"BREAKING CHANGE"* ]] || [[ "$line" == *"!:"* ]]; then
+                      HAS_MAJOR=1
+                    elif [[ "$line" == feat* ]] || [[ "$line" == chore* ]] || [[ "$line" == perf* ]]; then
+                      HAS_MINOR=1
+                    else
+                      HAS_PATCH=1
+                    fi
+                  done <<< "${{ steps.commits.outputs.commits }}"
+                  IFS='.' read -r MAJOR MINOR PATCH <<< "${LAST_TAG#v}"
+                  if [ $HAS_MAJOR -eq 1 ]; then
+                    echo "Bumping major version"
+                    MAJOR=$((MAJOR + 1))
+                    MINOR=0
+                    PATCH=0
+                  elif [ $HAS_MINOR -eq 1 ]; then
+                    echo "Bumping minor version"
+                    MINOR=$((MINOR + 1))
+                    PATCH=0
+                  elif [ $HAS_PATCH -eq 1 ]; then
+                    echo "Bumping patch version"
+                    PATCH=$((PATCH + 1))
+                  else
+                    echo "No version bump needed"
+                    exit 1
+                  fi
+                  NEXT_VERSION="$MAJOR.$MINOR.$PATCH"
+                  echo "Next version: $NEXT_VERSION"
+                  echo "next_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
+              env:
+                  LAST_TAG: ${{ steps.last_release.outputs.last_tag }}
+
+            - name: Create GitHub release
+              uses: actions/create-release@v1
+              with:
+                  tag_name: v${{ steps.next_version.outputs.next_version }}
+                  release_name: Release v${{ steps.next_version.outputs.next_version }}
+                  draft: false
+                  prerelease: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Log in to Docker Registry
+              uses: docker/login-action@v3
+              with:
+                  registry: registry.ozyria.fr
+                  username: ${{ secrets.DOCKER_USERNAME }}
+                  password: ${{ secrets.DOCKER_PASSWORD }}
+
+            - name: Build and push back-app image
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./
+                  file: ./Dockerfile
+                  push: true
+                  target: back-app
+                  platforms: linux/amd64
+                  build-args: |
+                      ENVIRONMENT=prod
+                  tags: |
+                      registry.ozyria.fr/corewar/back-app:release-latest
+                      registry.ozyria.fr/corewar/back-app:release-${{ steps.next_version.outputs.next_version }}
+
+            - name: Build and push migration job image
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./
+                  file: ./Dockerfile
+                  push: true
+                  target: migrate
+                  platforms: linux/amd64
+                  build-args: |
+                      ENVIRONMENT=prod
+                  tags: |
+                      registry.ozyria.fr/corewar/migrate-job:release-latest
+                      registry.ozyria.fr/corewar/migrate-job:release-${{ steps.next_version.outputs.next_version }}
+
+            - name: Build and push exec-app image
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./
+                  file: ./Dockerfile
+                  push: true
+                  target: exec-app
+                  platforms: linux/amd64
+                  build-args: |
+                      ENVIRONMENT=prod
+                  tags: |
+                      registry.ozyria.fr/corewar/exec-app:release-latest
+                      registry.ozyria.fr/corewar/exec-app:release-${{ steps.next_version.outputs.next_version }}
+
+            - name: Build and push front-app image
+              uses: docker/build-push-action@v6
+              with:
+                  context: ./
+                  file: ./Dockerfile
+                  push: true
+                  target: front-app
+                  platforms: linux/amd64
+                  build-args: |
+                      ENVIRONMENT=prod
+                  tags: |
+                      registry.ozyria.fr/corewar/front-app:release-latest
+                      registry.ozyria.fr/corewar/front-app:release-${{ steps.next_version.outputs.next_version }}
+
+            - name: Set up kubeconfig
+              run: |
+                  mkdir -p ~/.kube
+                  echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
+
+            - name: Deploy
+              run: |
+                  ./infra/deploy_prod.sh ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ steps.next_version.outputs.next_version }}
+
+            - name: Send Discord notification
+              run: |
+                  curl -H "Content-Type: application/json" \
+                      -d "{\"content\": \"🚀 **PROD** Deployment Info\n\nVersion \`${{ steps.next_version.outputs.next_version }}\` has been deployed to the **production environment**.\n\n- Frontend: \`https://corewar.ozyria.fr\`\n- Backend: \`https://corewar-api.ozyria.fr\`\n- Exec API: \`https://corewar-exec.ozyria.fr\`\"}" \
+                      ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+    clean-old-images:
+        name: Clean old release images
+        needs: release
+        uses: ./.github/workflows/clean-old-images.yaml
         with:
-          fetch-depth: 0 # Fetch all history for tags
-
-      - name: Get latest release tag
-        id: last_release
-        run: |
-          TAG=$(git tag --sort=-creatordate | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
-          if [ -z "$TAG" ]; then
-            TAG="v0.0.0"
-          fi
-          echo "Found latest tag: $TAG"
-          echo "last_tag=$TAG" >> $GITHUB_OUTPUT
-
-      - name: List commits since last release
-        id: commits
-        run: |
-          COMMITS=$(git log $LAST_TAG..HEAD --pretty=format:"%s" --no-merges)
-          echo "commits<<EOF" >> $GITHUB_OUTPUT
-          echo "$COMMITS" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-          echo "Commits since $LAST_TAG:"
-          echo "$COMMITS"
-        env:
-          LAST_TAG: ${{ steps.last_release.outputs.last_tag }}
-
-      - name: Calculate next version
-        id: next_version
-        run: |
-          HAS_MAJOR=0
-          HAS_MINOR=0
-          HAS_PATCH=0
-          while read -r line; do
-            if [[ "$line" == *"BREAKING CHANGE"* ]] || [[ "$line" == *"!:"* ]]; then
-              HAS_MAJOR=1
-            elif [[ "$line" == feat* ]] || [[ "$line" == chore* ]] || [[ "$line" == perf* ]]; then
-              HAS_MINOR=1
-            else
-              HAS_PATCH=1
-            fi
-          done <<< "${{ steps.commits.outputs.commits }}"
-          IFS='.' read -r MAJOR MINOR PATCH <<< "${LAST_TAG#v}"
-          if [ $HAS_MAJOR -eq 1 ]; then
-            echo "Bumping major version"
-            MAJOR=$((MAJOR + 1))
-            MINOR=0
-            PATCH=0
-          elif [ $HAS_MINOR -eq 1 ]; then
-            echo "Bumping minor version"
-            MINOR=$((MINOR + 1))
-            PATCH=0
-          elif [ $HAS_PATCH -eq 1 ]; then
-            echo "Bumping patch version"
-            PATCH=$((PATCH + 1))
-          else
-            echo "No version bump needed"
-            exit 1
-          fi
-          NEXT_VERSION="$MAJOR.$MINOR.$PATCH"
-          echo "Next version: $NEXT_VERSION"
-          echo "next_version=$NEXT_VERSION" >> $GITHUB_OUTPUT
-        env:
-          LAST_TAG: ${{ steps.last_release.outputs.last_tag }}
-
-      - name: Create GitHub release
-        uses: actions/create-release@v1
-        with:
-          tag_name: v${{ steps.next_version.outputs.next_version }}
-          release_name: Release v${{ steps.next_version.outputs.next_version }}
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Log in to Docker Registry
-        uses: docker/login-action@v3
-        with:
-            registry: registry.ozyria.fr
-            username: ${{ secrets.DOCKER_USERNAME }}
-            password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push back-app image
-        uses: docker/build-push-action@v6
-        with:
-            context: ./
-            file: ./Dockerfile
-            push: true
-            target: back-app
-            platforms: linux/amd64
-            build-args: |
-                ENVIRONMENT=prod
-            tags: |
-                registry.ozyria.fr/corewar/back-app:release-latest
-                registry.ozyria.fr/corewar/back-app:release-${{ steps.next_version.outputs.next_version }}
-
-      - name: Build and push migration job image
-        uses: docker/build-push-action@v6
-        with:
-            context: ./
-            file: ./Dockerfile
-            push: true
-            target: migrate
-            platforms: linux/amd64
-            build-args: |
-                ENVIRONMENT=prod
-            tags: |
-                registry.ozyria.fr/corewar/migrate-job:release-latest
-                registry.ozyria.fr/corewar/migrate-job:release-${{ steps.next_version.outputs.next_version }}
-
-      - name: Build and push exec-app image
-        uses: docker/build-push-action@v6
-        with:
-            context: ./
-            file: ./Dockerfile
-            push: true
-            target: exec-app
-            platforms: linux/amd64
-            build-args: |
-                ENVIRONMENT=prod
-            tags: |
-                registry.ozyria.fr/corewar/exec-app:release-latest
-                registry.ozyria.fr/corewar/exec-app:release-${{ steps.next_version.outputs.next_version }}
-
-      - name: Build and push front-app image
-        uses: docker/build-push-action@v6
-        with:
-            context: ./
-            file: ./Dockerfile
-            push: true
-            target: front-app
-            platforms: linux/amd64
-            build-args: |
-                ENVIRONMENT=prod
-            tags: |
-                registry.ozyria.fr/corewar/front-app:release-latest
-                registry.ozyria.fr/corewar/front-app:release-${{ steps.next_version.outputs.next_version }}
-
-      - name: Set up kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
-
-      - name: Deploy
-        run: |
-            ./infra/deploy_prod.sh ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ steps.next_version.outputs.next_version }}
-
-      - name: Send Discord notification
-        run: |
-          curl -H "Content-Type: application/json" \
-              -d "{\"content\": \"🚀 **PROD** Deployment Info\n\nVersion \`${{ steps.next_version.outputs.next_version }}\` has been deployed to the **production environment**.\n\n- Frontend: \`https://corewar.ozyria.fr\`\n- Backend: \`https://corewar-api.ozyria.fr\`\n- Exec API: \`https://corewar-exec.ozyria.fr\`\"}" \
-              ${{ secrets.DISCORD_WEBHOOK_URL }}
-
-  clean-old-images:
-    name: Clean old release images
-    needs: release
-    runs-on: ubuntu-24.04
-    strategy:
-      matrix:
-        image:
-          - back-app
-          - migrate-job
-          - front-app
-          - exec-app
-    steps:
-      - name: List ${{ matrix.image }} tags
-        id: list-tags
-        run: |
-          IMAGE="corewar/${{ matrix.image }}"
-          TAG_PREFIX=release-
-          echo "Listing tags starting with $TAG_PREFIX..."
-          TAGS=$(curl -s -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
-            "https://registry.ozyria.fr/v2/$IMAGE/tags/list" \
-            | jq -r '.tags[] | select(startswith("'$TAG_PREFIX'"))' | paste -sd "," -)
-          echo "tags=$TAGS" >> $GITHUB_OUTPUT
-          echo "Found tags: $TAGS"
-
-      - name: Delete old ${{ matrix.image }} tags
-        if: steps.list-tags.outputs.tags != ''
-        run: |
-          IMAGE="corewar/${{ matrix.image }}"
-          TAGS="${{ steps.list-tags.outputs.tags }}"
-
-          IFS=',' read -ra TAG_ARRAY <<< "$TAGS"
-            
-          for TAG in "${TAG_ARRAY[@]}"; do
-            CREATED=$(curl -s -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
-              "https://registry.ozyria.fr/v2/$IMAGE/manifests/$TAG" \
-              | jq -r '.history[0].v1Compatibility | fromjson.created' 2>/dev/null || echo "1970-01-01T00:00:00Z")
-            echo "$CREATED $TAG"
-          done | sort -r | tee sorted_tags.txt
-
-          tail -n +10 sorted_tags.txt | while read CREATED TAG; do
-            echo "Deleting old tag $TAG ($CREATED)..."
-            DIGEST=$(curl -s -I -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
-              -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
-              "https://registry.ozyria.fr/v2/$IMAGE/manifests/$TAG" \
-              | grep docker-content-digest | awk '{print $2}' | tr -d $'\r')
-
-            if [ -n "$DIGEST" ]; then
-              curl -s -X DELETE -u ${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }} \
-                "https://registry.ozyria.fr/v2/$IMAGE/manifests/$DIGEST"
-              echo "Deleted $TAG ($DIGEST)"
-            else
-              echo "Skipping $TAG, could not resolve digest."
-            fi
-          done
+            tagPrefix: release-
+            keepCount: 10
+        secrets:
+            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+            DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
