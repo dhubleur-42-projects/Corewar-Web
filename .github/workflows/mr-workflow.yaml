@@ -104,21 +104,39 @@ jobs:
         needs: build
         runs-on: ubuntu-24.04
         steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+            - name: Install OpenVPN
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y openvpn openvpn-systemd-resolved
 
-            - name: Compute short SHA
-              id: vars
-              run: echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+            - name: Set up OpenVPN config
+              run: |
+                  echo "${{ secrets.OVPN_CONFIG_DATA }}" | base64 -d > /tmp/ci.ovpn
 
             - name: Set up kubeconfig
               run: |
                   mkdir -p ~/.kube
                   echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
 
+            - name: Compute short SHA
+              id: vars
+              run: echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Start OpenVPN
+              run: |
+                  sudo openvpn --config /tmp/ci.ovpn --daemon
+                  sleep 10
+
             - name: Deploy
               run: |
                   ./infra/deploy_mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ secrets.TLS_CERT }} ${{ secrets.TLS_KEY }} ${{ steps.vars.outputs.sha_short }} ${{ secrets.DOCKER_USERNAME }} ${{ secrets.DOCKER_PASSWORD }}
+
+            - name: Disconnect VPN
+              run: |
+                  sudo killall openvpn || true
 
             - name: Comment MR with deployment info
               uses: mshick/add-pr-comment@v2
@@ -153,17 +171,32 @@ jobs:
         runs-on: ubuntu-24.04
 
         steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+            - name: Install OpenVPN
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y openvpn openvpn-systemd-resolved
+
+            - name: Set up OpenVPN config
+              run: |
+                  echo "${{ secrets.OVPN_CONFIG_DATA }}" | base64 -d > /tmp/ci.ovpn
 
             - name: Set up kubeconfig
               run: |
                   mkdir -p ~/.kube
                   echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
 
+            - name: Start OpenVPN
+              run: |
+                  sudo openvpn --config /tmp/ci.ovpn --daemon
+                  sleep 10
+
             - name: Delete MR Namespace
               run: |
-                  kubectl delete namespace corewar-mr-${{ github.event.pull_request.number }} --ignore-not-found --insecure-skip-tls-verify
+                  kubectl delete namespace corewar-mr-${{ github.event.pull_request.number }} --ignore-not-found
+
+            - name: Disconnect VPN
+              run: |
+                  sudo killall openvpn || true
 
             - name: Comment MR with cleanup info
               uses: mshick/add-pr-comment@v2

@@ -149,14 +149,32 @@ jobs:
                       registry.ozyria.fr/corewar/front-app:release-latest
                       registry.ozyria.fr/corewar/front-app:release-${{ steps.next_version.outputs.next_version }}
 
+            - name: Install OpenVPN
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y openvpn openvpn-systemd-resolved
+
+            - name: Set up OpenVPN config
+              run: |
+                  echo "${{ secrets.OVPN_CONFIG_DATA }}" | base64 -d > /tmp/ci.ovpn
+
             - name: Set up kubeconfig
               run: |
                   mkdir -p ~/.kube
                   echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
 
+            - name: Start OpenVPN
+              run: |
+                  sudo openvpn --config /tmp/ci.ovpn --daemon
+                  sleep 10
+
             - name: Deploy
               run: |
                   ./infra/deploy_prod.sh ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ steps.next_version.outputs.next_version }}
+
+            - name: Disconnect VPN
+              run: |
+                  sudo killall openvpn || true
 
             - name: Send Discord notification
               run: |
