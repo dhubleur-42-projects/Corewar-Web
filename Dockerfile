@@ -1,4 +1,8 @@
 FROM node:23-alpine AS base
+
+ARG BUILD_DATE
+LABEL org.opencontainers.image.created=$BUILD_DATE
+
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 

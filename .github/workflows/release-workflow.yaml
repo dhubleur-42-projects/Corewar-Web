@@ -111,6 +111,7 @@ jobs:
         with:
             buildArgs: |
                 ENVIRONMENT=prod
+                BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
             tags: ${{ needs.prepare-tags.outputs.tags }}
         secrets:
             DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}

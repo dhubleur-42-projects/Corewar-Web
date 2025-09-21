@@ -61,6 +61,7 @@ jobs:
             buildArgs: |
                 MR_ID=${{ github.event.pull_request.number }}
                 ENVIRONMENT=mr
+                BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
             tags: ${{ needs.prepare-tags.outputs.tags }}
         secrets:
             DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
