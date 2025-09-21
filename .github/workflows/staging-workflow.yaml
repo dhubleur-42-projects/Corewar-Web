@@ -100,6 +100,20 @@ jobs:
         needs: build
         runs-on: ubuntu-24.04
         steps:
+            - name: Install OpenVPN
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y openvpn openvpn-systemd-resolved
+
+            - name: Set up OpenVPN config
+              run: |
+                  echo "${{ secrets.OVPN_CONFIG_DATA }}" | base64 -d > /tmp/ci.ovpn
+
+            - name: Set up kubeconfig
+              run: |
+                  mkdir -p ~/.kube
+                  echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
+
             - name: Checkout
               uses: actions/checkout@v4
 
@@ -107,14 +121,18 @@ jobs:
               id: vars
               run: echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
 
-            - name: Set up kubeconfig
+            - name: Start OpenVPN
               run: |
-                  mkdir -p ~/.kube
-                  echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
+                  sudo openvpn --config /tmp/ci.ovpn --daemon
+                  sleep 10
 
             - name: Deploy
               run: |
                   ./infra/deploy_staging.sh ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ steps.vars.outputs.sha_short }}
+
+            - name: Disconnect VPN
+              run: |
+                  sudo killall openvpn || true
 
     comment-discord:
         name: Notify Discord with deployment info

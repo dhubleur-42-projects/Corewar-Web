@@ -12,10 +12,10 @@ if [ -z "$API_CLIENT_ID" ] || [ -z "$API_CLIENT_SECRET" ] || [ -z "$COMMIT_SHA" 
   exit 1
 fi
 
-if kubectl get secret data-credentials -n corewar-staging --insecure-skip-tls-verify >/dev/null 2>&1; then
-  POSTGRES_PASSWORD=$(kubectl get secret data-credentials -n corewar-staging --insecure-skip-tls-verify -o jsonpath="{.data.postgres-password}" | base64 --decode)
-  REDIS_PASSWORD=$(kubectl get secret data-credentials -n corewar-staging --insecure-skip-tls-verify -o jsonpath="{.data.redis-password}" | base64 --decode)
-  JWT_SECRET=$(kubectl get secret data-credentials -n corewar-staging --insecure-skip-tls-verify -o jsonpath="{.data.jwt-secret}" | base64 --decode)
+if kubectl get secret data-credentials -n corewar-staging >/dev/null 2>&1; then
+  POSTGRES_PASSWORD=$(kubectl get secret data-credentials -n corewar-staging -o jsonpath="{.data.postgres-password}" | base64 --decode)
+  REDIS_PASSWORD=$(kubectl get secret data-credentials -n corewar-staging -o jsonpath="{.data.redis-password}" | base64 --decode)
+  JWT_SECRET=$(kubectl get secret data-credentials -n corewar-staging -o jsonpath="{.data.jwt-secret}" | base64 --decode)
 else 
   echo "Secret data-credentials not found in namespace corewar-staging"
   exit 1
@@ -27,11 +27,11 @@ sed -i "s/{{API_CLIENT_SECRET}}/${API_CLIENT_SECRET}/g" /tmp/back-app.env
 sed -i "s/{{POSTGRES_PASSWORD}}/${POSTGRES_PASSWORD}/g" /tmp/back-app.env
 sed -i "s/{{REDIS_PASSWORD}}/${REDIS_PASSWORD}/g" /tmp/back-app.env
 sed -i "s/{{JWT_SECRET}}/${JWT_SECRET}/g" /tmp/back-app.env
-kubectl create configmap back-app-config --from-env-file=/tmp/back-app.env -n corewar-staging --insecure-skip-tls-verify --dry-run=client -o yaml | kubectl apply --insecure-skip-tls-verify -f -
+kubectl create configmap back-app-config --from-env-file=/tmp/back-app.env -n corewar-staging --dry-run=client -o yaml | kubectl apply -f -
 
 cp ${WDIR}/../apps/exec-app/envValues/.env.staging /tmp/exec-app.env
 sed -i "s/{{REDIS_PASSWORD}}/${REDIS_PASSWORD}/g" /tmp/exec-app.env
-kubectl create configmap exec-app-config --from-env-file=/tmp/exec-app.env -n corewar-staging --insecure-skip-tls-verify --dry-run=client -o yaml | kubectl apply --insecure-skip-tls-verify -f -
+kubectl create configmap exec-app-config --from-env-file=/tmp/exec-app.env -n corewar-staging --dry-run=client -o yaml | kubectl apply -f -
 
 MANIFESTS=(01-migration.yaml 02-exec.yaml 03-back.yaml 04-front.yaml 05-ingress.yaml)
 declare -A DEPLOYMENTS
@@ -39,26 +39,26 @@ DEPLOYMENTS["02-exec.yaml"]="exec-app"
 DEPLOYMENTS["03-back.yaml"]="back-app"
 DEPLOYMENTS["04-front.yaml"]="front-app"
 
-kubectl delete job db-migration -n corewar-staging --insecure-skip-tls-verify --ignore-not-found
+kubectl delete job db-migration -n corewar-staging --ignore-not-found
 
 for manifest in "${MANIFESTS[@]}"; do
   cp ${WDIR}/manifests/staging/${manifest} /tmp/${manifest}
   sed -i "s/{{COMMIT_SHA}}/${COMMIT_SHA}/g" /tmp/${manifest}
   echo "Applying manifest ${manifest}..."
-  kubectl apply -f /tmp/${manifest} -n corewar-staging --insecure-skip-tls-verify --validate=false
+  kubectl apply -f /tmp/${manifest} -n corewar-staging --validate=false
 
   if [[ "$manifest" == "01-migration.yaml" ]]; then
-    kubectl wait -n corewar-staging --for=condition=complete job/db-migration --timeout=300s --insecure-skip-tls-verify
-    POD=$(kubectl get pod -n corewar-staging -l job-name=db-migration -o jsonpath='{.items[0].metadata.name}' --insecure-skip-tls-verify)
+    kubectl wait -n corewar-staging --for=condition=complete job/db-migration --timeout=300s
+    POD=$(kubectl get pod -n corewar-staging -l job-name=db-migration -o jsonpath='{.items[0].metadata.name}')
     echo ====== Migration job logs ======
-    kubectl logs $POD -n corewar-staging --insecure-skip-tls-verify
+    kubectl logs $POD -n corewar-staging
     echo ================================
   fi
 
   if [[ -n "${DEPLOYMENTS[$manifest]}" ]]; then
     for deploy in ${DEPLOYMENTS[$manifest]//,/ }; do
       echo "Waiting for deployment $deploy to be ready..."
-      kubectl rollout status deployment/$deploy -n corewar-staging --insecure-skip-tls-verify --timeout=180s
+      kubectl rollout status deployment/$deploy -n corewar-staging --timeout=180s
       echo "Deployment $deploy is ready."
     done
   fi
