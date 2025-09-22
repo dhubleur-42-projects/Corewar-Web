@@ -68,7 +68,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				return
 			}
 
-			const { id, login } = await userRes.json()
+			const { id, login, image } = await userRes.json()
 
 			if (
 				config.loginsWhitelist.length > 0 &&
@@ -79,7 +79,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				return
 			}
 
-			if (id == null || login == null) {
+			if (id == null || login == null || image?.versions?.small == null) {
 				logger.debug('Invalid user info received', { id, login })
 				reply.code(500).send({ error: 'Failed to authenticate' })
 				return
@@ -96,6 +96,7 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 					data: {
 						remoteId: id,
 						username: login,
+						profilePictureUrl: image.versions.small,
 					},
 				})
 			}
@@ -144,6 +145,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				user: {
 					id: user.id,
 					username: user.username,
+					role: user.role,
+					profilePictureUrl: user.profilePictureUrl,
+					locale: user.locale,
 				},
 			})
 		}),
@@ -164,6 +168,9 @@ const authRoutes: FastifyPluginAsync = async (fastify) => {
 				user: {
 					id: request.userId,
 					username: user.username,
+					role: user.role,
+					locale: user.locale,
+					profilePictureUrl: user.profilePictureUrl,
 				},
 			})
 		}),
