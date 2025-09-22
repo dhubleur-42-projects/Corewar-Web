@@ -52,7 +52,7 @@ function Dashboard() {
 	} = useFetchMe()
 	const resetFetchMe = useResetFetchMe()
 
-	const { user, isUserFromCache, setUser } = useStore()
+	const { user, isUserFromCache, setUser, setLocale } = useStore()
 
 	const isUserDefined = user != null
 
@@ -65,6 +65,7 @@ function Dashboard() {
 			}
 			if (fetchMeSuccess && logoutRef.current === false) {
 				setUser(fetchMeData.user)
+				setLocale(fetchMeData.user.locale as 'en' | 'fr')
 				return
 			}
 			navigate('/', {
@@ -79,6 +80,7 @@ function Dashboard() {
 		fetchMeSuccess,
 		fetchMeData,
 		setUser,
+		setLocale,
 	])
 
 	const { mutate: logoutMutate } = useLogout()

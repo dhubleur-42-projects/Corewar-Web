@@ -4,7 +4,7 @@ import config from '../utils/config'
 
 export interface LocaleSlice {
 	locale: Language
-	setLocale: (newLocale: Language) => void
+	setLocale: (newLocale: string) => void
 }
 
 const getInitialLocale = (): Language => {
@@ -20,8 +20,12 @@ const getInitialLocale = (): Language => {
 const createLocaleSlice: StateCreator<LocaleSlice> = (set) => ({
 	locale: getInitialLocale(),
 	setLocale: (newLocale) => {
+		newLocale = newLocale.toLowerCase()
+		if (!Object.values(Language).includes(newLocale as Language)) {
+			newLocale = config.localeDefault
+		}
 		localStorage.setItem(config.localeKey, newLocale)
-		set({ locale: newLocale })
+		set({ locale: newLocale as Language })
 	},
 })
 

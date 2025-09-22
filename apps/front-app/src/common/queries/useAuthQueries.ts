@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { generateFetchApi } from './queries'
+import type { UserRole } from '../store/userSlice'
 
 interface AuthLinkResponse {
 	url: string
@@ -20,6 +21,9 @@ interface ExchangeTokenResponse {
 	user: {
 		id: string
 		username: string
+		role: UserRole
+		profilePictureUrl: string
+		locale: string
 	}
 }
 
