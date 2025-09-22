@@ -20,9 +20,11 @@ const i18n = defineI18n({
 	},
 })
 
+const HEADER_HEIGHT = 60
+
 const Header = styled('div')({
 	backgroundColor: '#f5f5f5',
-	height: 60,
+	height: HEADER_HEIGHT,
 	padding: 10,
 	display: 'flex',
 	flexDirection: 'row',
@@ -32,7 +34,7 @@ const Header = styled('div')({
 })
 
 const Content = styled('div')({
-	height: '100%',
+	height: `calc(100% - ${HEADER_HEIGHT}px)`,
 	display: 'flex',
 	flexDirection: 'column',
 	justifyContent: 'center',
