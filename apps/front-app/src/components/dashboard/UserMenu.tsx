@@ -6,6 +6,7 @@ import { useLogout } from '../../common/queries/useAuthQueries'
 import { useNavigate } from 'react-router'
 import Language from '../../common/utils/language'
 import CheckIcon from '@mui/icons-material/Check'
+import { useUpdateLocale } from '../../common/queries/useUserQueries'
 
 const i18n = defineI18n({
 	en: {
@@ -78,6 +79,7 @@ function UserMenu() {
 	}
 
 	const { mutate: logoutMutate } = useLogout()
+	const { mutate: updateLocaleMutate } = useUpdateLocale()
 
 	const handleLogout = useCallback(() => {
 		logoutMutate(undefined, {
@@ -108,6 +110,7 @@ function UserMenu() {
 		setTimeout(() => {
 			setLocale(newLocale)
 		}, 100)
+		updateLocaleMutate(newLocale)
 	}
 
 	const goToProfile = () => {

@@ -14,6 +14,7 @@ import { initJobs } from './async/jobs/jobs'
 import { RedisOptions } from 'bullmq'
 import { bullMqPlugin } from 'server-common'
 import execRoutes from './routes/exec/exec'
+import userRoutes from './routes/user/user'
 
 const connection: RedisOptions = {
 	host: config.redisHost,
@@ -127,6 +128,9 @@ const connection: RedisOptions = {
 
 	await app.register(execRoutes, { prefix: '/exec' })
 	getLogger().debug('Registered /exec routes')
+
+	await app.register(userRoutes, { prefix: '/user' })
+	getLogger().debug('Registered /user routes')
 
 	app.get('/health', async () => {
 		return { status: 'ok' }
