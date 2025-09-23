@@ -7,7 +7,7 @@
 		"dev": "ts-node-dev --respawn --transpile-only src/server.ts",
 		"build": "tsc",
 		"start": "node dist/server.js",
-		"lint": "eslint . --ext .ts && prettier --check \"./**/*.{ts,tsx,json}\""
+		"lint": "eslint . --ext .ts && prettier --check \"./src/**/*.{ts,tsx,json}\" src"
 	},
 	"keywords": [],
 	"author": "",

@@ -8,7 +8,7 @@
 		"dist"
 	],
 	"scripts": {
-		"lint": "eslint --ext .ts src && prettier --check \"./**/*.{ts,tsx,json}\"",
+		"lint": "eslint --ext .ts src && prettier --check \"./src/**/*.{ts,tsx,json}\" src",
 		"build": "tsc",
 		"watch": "tsc --watch"
 	},

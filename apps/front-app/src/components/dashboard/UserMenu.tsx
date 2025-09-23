@@ -1,8 +1,8 @@
 import { Button, Menu, MenuItem, styled } from '@mui/material'
 import useStore from '../../common/store/store'
 import { defineI18n, useTranslate } from '../../common/utils/i18n'
-import { useCallback, useState } from 'react'
-import { useLogout } from '../../common/queries/useAuthQueries'
+import React, { useCallback, useState } from 'react'
+import { useLogout, useResetFetchMe } from '../../common/queries/useAuthQueries'
 import { useNavigate } from 'react-router'
 import Language from '../../common/utils/language'
 import CheckIcon from '@mui/icons-material/Check'
@@ -80,6 +80,7 @@ function UserMenu() {
 
 	const { mutate: logoutMutate } = useLogout()
 	const { mutate: updateLocaleMutate } = useUpdateLocale()
+	const resetFetchMe = useResetFetchMe()
 
 	const handleLogout = useCallback(() => {
 		logoutMutate(undefined, {
@@ -163,6 +164,3 @@ function UserMenu() {
 }
 
 export default UserMenu
-function resetFetchMe() {
-	throw new Error('Function not implemented.')
-}

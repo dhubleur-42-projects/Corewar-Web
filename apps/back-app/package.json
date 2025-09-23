@@ -11,7 +11,7 @@
 		"migrate:deploy": "prisma migrate deploy --schema=./prisma/schema.prisma",
 		"prisma:generate": "prisma generate --schema=./prisma/schema.prisma",
 		"prisma:studio": "prisma studio --schema=./prisma/schema.prisma",
-		"lint": "eslint . --ext .ts && prettier --check \"./**/*.{ts,tsx,json}\""
+		"lint": "eslint . --ext .ts && prettier --check \"./src/**/*.{ts,tsx,json}\""
 	},
 	"keywords": [],
 	"author": "",
