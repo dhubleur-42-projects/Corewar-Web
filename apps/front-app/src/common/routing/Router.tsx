@@ -3,6 +3,7 @@ import Dashboard from '../../components/dashboard/Dashboard'
 import Home from '../../components/home/Home'
 import Login from '../../components/auth/Login'
 import Callback from '../../components/auth/Callback'
+import UserProfile from '../../components/dashboard/profile/UserProfile'
 
 function RouterContent() {
 	return (
@@ -11,6 +12,7 @@ function RouterContent() {
 			<Route path="/callback" element={<Callback />} />
 			<Route path="/dashboard" element={<Dashboard />}>
 				<Route path="home" element={<Home />} />
+				<Route path="profile" element={<UserProfile />} />
 				<Route
 					path="*"
 					element={<Navigate to="/dashboard/home" replace />}

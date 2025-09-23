@@ -1,24 +1,9 @@
 import { Outlet, useNavigate } from 'react-router'
 import useStore from '../../common/store/store'
-import { useCallback, useEffect, useRef } from 'react'
-import {
-	useFetchMe,
-	useLogout,
-	useResetFetchMe,
-} from '../../common/queries/useAuthQueries'
-import { Button, styled } from '@mui/material'
-import { defineI18n, useTranslate } from '../../common/utils/i18n'
-
-const i18n = defineI18n({
-	en: {
-		logout: 'Logout',
-		hello: 'Hello {name}',
-	},
-	fr: {
-		logout: 'Se déconnecter',
-		hello: 'Bonjour {name}',
-	},
-})
+import { useEffect } from 'react'
+import { useFetchMe } from '../../common/queries/useAuthQueries'
+import { styled } from '@mui/material'
+import UserMenu from './UserMenu'
 
 const HEADER_HEIGHT = 60
 
@@ -43,27 +28,23 @@ const Content = styled('div')({
 
 function Dashboard() {
 	const navigate = useNavigate()
-	const translate = useTranslate()
 
 	const {
 		isLoading: fetchMeLoading,
 		isSuccess: fetchMeSuccess,
 		data: fetchMeData,
 	} = useFetchMe()
-	const resetFetchMe = useResetFetchMe()
 
 	const { user, isUserFromCache, setUser, setLocale } = useStore()
 
 	const isUserDefined = user != null
-
-	const logoutRef = useRef(false)
 
 	useEffect(() => {
 		if (!isUserDefined || isUserFromCache) {
 			if (fetchMeLoading) {
 				return
 			}
-			if (fetchMeSuccess && logoutRef.current === false) {
+			if (fetchMeSuccess) {
 				setUser(fetchMeData.user)
 				setLocale(fetchMeData.user.locale as 'en' | 'fr')
 				return
@@ -83,26 +64,10 @@ function Dashboard() {
 		setLocale,
 	])
 
-	const { mutate: logoutMutate } = useLogout()
-
-	const handleLogout = useCallback(() => {
-		logoutMutate(undefined, {
-			onSuccess: () => {
-				resetFetchMe()
-				logoutRef.current = true
-				setUser(null)
-				navigate('/', { replace: true })
-			},
-		})
-	}, [logoutMutate, setUser, navigate, resetFetchMe])
-
 	return (
 		<>
 			<Header>
-				<p>{translate(i18n.hello, { name: user?.username })}</p>
-				<Button variant="contained" size="small" onClick={handleLogout}>
-					{translate(i18n.logout)}
-				</Button>
+				<UserMenu />
 			</Header>
 			<Content>
 				<Outlet />
