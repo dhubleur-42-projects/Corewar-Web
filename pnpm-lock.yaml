@@ -202,6 +202,9 @@ importers:
       react-helmet:
         specifier: ^6.1.0
         version: 6.1.0(react@19.1.0)
+      react-hook-form:
+        specifier: ^7.63.0
+        version: 7.63.0(react@19.1.0)
       react-intl:
         specifier: ^7.1.11
         version: 7.1.11(react@19.1.0)(typescript@5.8.3)
@@ -2464,6 +2467,12 @@ packages:
     resolution: {integrity: sha512-4uMzEY9nlDlgxr61NL3XbKRy1hEkXmKNXhjbAIOVw5vcFrsdYbH2FEwcNyWvWinl103nXgzYNlns9ca+8kFiWw==}
     peerDependencies:
       react: '>=16.3.0'
+
+  react-hook-form@7.63.0:
+    resolution: {integrity: sha512-ZwueDMvUeucovM2VjkCf7zIHcs1aAlDimZu2Hvel5C5907gUzMpm4xCrQXtRzCvsBqFjonB4m3x4LzCFI1ZKWA==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      react: ^16.8.0 || ^17 || ^18 || ^19
 
   react-intl@7.1.11:
     resolution: {integrity: sha512-tnVoRCWvW5Ie2ikYSdPF7z3+880yCe/9xPmitFeRPw3RYDcCfR4m8ZYa4MBq19W4adt9Z+PQA4FaMBCJ7E+HCQ==}
@@ -5356,6 +5365,10 @@ snapshots:
       react: 19.1.0
       react-fast-compare: 3.2.2
       react-side-effect: 2.1.2(react@19.1.0)
+
+  react-hook-form@7.63.0(react@19.1.0):
+    dependencies:
+      react: 19.1.0
 
   react-intl@7.1.11(react@19.1.0)(typescript@5.8.3):
     dependencies:

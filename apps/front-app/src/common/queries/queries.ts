@@ -21,6 +21,10 @@ const handleError = (error: unknown) => {
 		return
 	}
 
+	if (error instanceof HttpError && error.isTreated()) {
+		return
+	}
+
 	if (error instanceof HttpError && error.getError() != null) {
 		toast.error(error.getError())
 		return
@@ -64,8 +68,9 @@ const fetchApi = (url: string, options?: RequestInit) => {
 
 type FetchApiOptions = RequestInit | ((...args: any[]) => RequestInit)
 
-class HttpError extends Error {
+export class HttpError extends Error {
 	private error?: string
+	private treated = false
 	constructor(
 		public status: number,
 		message: string,
@@ -78,6 +83,14 @@ class HttpError extends Error {
 
 	getError() {
 		return this.error
+	}
+
+	isTreated() {
+		return this.treated
+	}
+
+	setTreated() {
+		this.treated = true
 	}
 }
 
