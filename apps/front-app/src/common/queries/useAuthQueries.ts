@@ -6,14 +6,14 @@ interface AuthLinkResponse {
 	url: string
 }
 
-const fetchAuthLink = generateFetchApi<[], AuthLinkResponse>('/auth', {
+const fetchAuthLink = generateFetchApi<void, AuthLinkResponse>('/auth', {
 	method: 'GET',
 })
 
 export const useFetchAuthLink = () => {
 	return useQuery<AuthLinkResponse>({
 		queryKey: ['fetchAuthLink'],
-		queryFn: fetchAuthLink,
+		queryFn: () => fetchAuthLink(),
 	})
 }
 
@@ -27,28 +27,28 @@ interface ExchangeTokenResponse {
 	}
 }
 
-const exchangeCodeForToken = generateFetchApi<[string], ExchangeTokenResponse>(
-	'/auth/callback',
-	(code) => ({
-		method: 'POST',
-		body: JSON.stringify({ code }),
-	}),
-)
+const exchangeCodeForToken = generateFetchApi<
+	{ code: string },
+	ExchangeTokenResponse
+>('/auth/callback', ({ code }) => ({
+	method: 'POST',
+	body: JSON.stringify({ code }),
+}))
 
 export const useExchangeToken = () => {
 	return useMutation({
-		mutationFn: (code: string) => exchangeCodeForToken(code),
+		mutationFn: (code: string) => exchangeCodeForToken({ code }),
 	})
 }
 
-const fetchMe = generateFetchApi<[], ExchangeTokenResponse>('/auth/me', {
+const fetchMe = generateFetchApi<void, ExchangeTokenResponse>('/auth/me', {
 	method: 'GET',
 })
 
 export const useFetchMe = () => {
 	return useQuery<ExchangeTokenResponse>({
 		queryKey: ['fetchMe'],
-		queryFn: fetchMe,
+		queryFn: () => fetchMe(),
 		refetchOnWindowFocus: false,
 		retry: false,
 	})
@@ -61,13 +61,13 @@ export const useResetFetchMe = () => {
 	}
 }
 
-const logout = generateFetchApi<[], void>('/auth/logout', {
+const logout = generateFetchApi<void, void>('/auth/logout', {
 	method: 'POST',
 })
 
 export const useLogout = () => {
 	return useMutation({
-		mutationFn: logout,
+		mutationFn: () => logout(),
 		onSuccess: () => {
 			window.location.href = '/'
 		},

@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from 'fastify'
-import { LocaleBody, LocaleSchema, ProfileBody, ProfileSchema } from './schemas'
+import { LocaleBody, LocaleSchema } from './schemas'
 
 const userRoutes: FastifyPluginAsync = async (fastify) => {
 	fastify.securePost('/locale', {
@@ -18,9 +18,34 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
 	})
 
 	fastify.securePost('/profile', {
-		schema: ProfileSchema,
 		handler: fastify.withTransaction(async (request, reply) => {
-			const { username } = request.body as ProfileBody
+			const parts = request.parts()
+
+			let username: string | null = null
+			let profilePictureFile: Buffer | null = null
+
+			for await (const part of parts) {
+				if (
+					part.type === 'file' &&
+					part.fieldname === 'profilePicture'
+				) {
+					profilePictureFile = await part.toBuffer()
+				} else if (
+					part.type === 'field' &&
+					part.fieldname === 'username'
+				) {
+					username = String(part.value)
+				}
+			}
+			if (username == null) {
+				return reply.status(400).send({ error: 'Username is required' })
+			}
+			if (username.length < 5 || username.length > 20) {
+				return reply
+					.status(400)
+					.send({ error: 'Invalid username length' })
+			}
+
 			const userId = request.userId!
 
 			const isUsedUsername =

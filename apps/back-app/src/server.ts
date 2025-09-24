@@ -15,6 +15,7 @@ import { RedisOptions } from 'bullmq'
 import { bullMqPlugin } from 'server-common'
 import execRoutes from './routes/exec/exec'
 import userRoutes from './routes/user/user'
+import fastifyMultipart from '@fastify/multipart'
 
 const connection: RedisOptions = {
 	host: config.redisHost,
@@ -122,6 +123,9 @@ const connection: RedisOptions = {
 
 	await app.register(jwksRoutes)
 	getLogger().debug('Registered JWKS routes')
+
+	await app.register(fastifyMultipart)
+	getLogger().debug('Registered Multipart plugin')
 
 	await app.register(authRoutes, { prefix: '/auth' })
 	getLogger().debug('Registered /auth routes')

@@ -5,13 +5,16 @@ interface ExecTokenResponse {
 	token: string
 }
 
-const fetchExecToken = generateFetchApi<[], ExecTokenResponse>('/exec/token', {
-	method: 'GET',
-})
+const fetchExecToken = generateFetchApi<void, ExecTokenResponse>(
+	'/exec/token',
+	{
+		method: 'GET',
+	},
+)
 
 export const useExecToken = () => {
 	const mutation = useMutation({
-		mutationFn: fetchExecToken,
+		mutationFn: () => fetchExecToken(),
 	})
 
 	return mutation

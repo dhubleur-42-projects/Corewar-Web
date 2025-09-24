@@ -3,9 +3,9 @@ import { generateFetchApi } from './queries'
 import type Language from '../utils/language'
 import type { UserRole } from '../store/userSlice'
 
-const updateLocale = generateFetchApi<[Language], void>(
+const updateLocale = generateFetchApi<{ locale: Language }, void>(
 	'/user/locale',
-	(locale) => ({
+	({ locale }) => ({
 		method: 'POST',
 		body: JSON.stringify({ locale: locale.toUpperCase() }),
 	}),
@@ -13,7 +13,7 @@ const updateLocale = generateFetchApi<[Language], void>(
 
 export const useUpdateLocale = () => {
 	return useMutation({
-		mutationFn: updateLocale,
+		mutationFn: (locale: Language) => updateLocale({ locale }),
 	})
 }
 
@@ -26,12 +26,23 @@ interface UpdateProfileResponse {
 	}
 }
 
-const updateProfile = generateFetchApi<[string], UpdateProfileResponse>(
+const updateProfile = generateFetchApi<
+	{ username: string; profilePicture: File | null },
+	UpdateProfileResponse
+>(
 	'/user/profile',
-	(username) => ({
-		method: 'POST',
-		body: JSON.stringify({ username }),
-	}),
+	({ username, profilePicture }) => {
+		const formData = new FormData()
+		formData.append('username', username)
+		if (profilePicture) {
+			formData.append('profilePicture', profilePicture)
+		}
+		return {
+			method: 'POST',
+			body: formData,
+		}
+	},
+	'multipart/form-data',
 )
 
 export const useUpdateProfile = ({

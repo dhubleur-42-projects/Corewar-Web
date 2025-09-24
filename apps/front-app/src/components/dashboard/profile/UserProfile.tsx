@@ -6,17 +6,20 @@ import { useFormatError } from '../../../common/form/formErrors'
 import { useUpdateProfile } from '../../../common/queries/useUserQueries'
 import { HttpError } from '../../../common/queries/queries'
 import { useEffect, useState } from 'react'
+import ProfilePictureUploader from './ProfilePictureUploader'
 
 const i18n = defineI18n({
 	en: {
 		profile: 'Profile',
 		username: 'Username',
+		profilePicture: 'Profile Picture',
 		submit: 'Save',
 		profileUpdated: 'Profile updated successfully',
 	},
 	fr: {
 		profile: 'Profil',
 		username: "Nom d'utilisateur",
+		profilePicture: 'Photo de profil',
 		submit: 'Enregistrer',
 		profileUpdated: 'Profil mis à jour avec succès',
 	},
@@ -41,7 +44,7 @@ const FormElement = styled('div')({
 	width: 300,
 })
 
-const Formlabel = styled('label')({
+const FormLabel = styled('label')({
 	fontSize: 14,
 })
 
@@ -62,8 +65,9 @@ const FormSuccess = styled('span')({
 	fontSize: 12,
 })
 
-type UserFormData = {
+export type UserFormData = {
 	username: string
+	profilePicture: File | null
 }
 
 function UserProfile() {
@@ -77,6 +81,7 @@ function UserProfile() {
 	const methods = useForm<UserFormData>({
 		defaultValues: {
 			username: user!.username,
+			profilePicture: null,
 		},
 	})
 
@@ -109,14 +114,14 @@ function UserProfile() {
 			methods.setError('username', { type: 'alreadyUsed' })
 			return
 		}
-		updateUserProfile(data.username)
+		updateUserProfile(data)
 	}
 
 	return (
 		<ProfileContainer onSubmit={methods.handleSubmit(onSubmit)}>
 			<ProfileTitle>{translate(i18n.profile)}</ProfileTitle>
 			<FormElement>
-				<Formlabel>{translate(i18n.username)}</Formlabel>
+				<FormLabel>{translate(i18n.username)}</FormLabel>
 				<FormInput
 					id="username"
 					type="text"
@@ -135,6 +140,10 @@ function UserProfile() {
 						})}
 					</FormError>
 				)}
+			</FormElement>
+			<FormElement>
+				<FormLabel>{translate(i18n.profilePicture)}</FormLabel>
+				<ProfilePictureUploader methods={methods} />
 			</FormElement>
 			<Button type="submit" variant="contained" color="primary">
 				{translate(i18n.submit)}
