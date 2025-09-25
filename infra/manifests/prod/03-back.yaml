@@ -36,3 +36,10 @@ spec:
               port: 3000
             initialDelaySeconds: 2
             periodSeconds: 5
+          volumeMounts:
+            - name: app-uploads
+              mountPath: /corewar-back-app/uploads
+      volumes:
+        - name: app-uploads
+          persistentVolumeClaim:
+            claimName: app-uploads

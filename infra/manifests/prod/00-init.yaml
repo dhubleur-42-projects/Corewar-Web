@@ -70,6 +70,20 @@ spec:
       storage: 1Gi
 
 ---
+# create app upload pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-uploads
+  namespace: corewar-prod
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+
+---
 # create postgres deployment
 apiVersion: apps/v1
 kind: Deployment
@@ -306,6 +320,13 @@ spec:
               port: 3000
             initialDelaySeconds: 2
             periodSeconds: 5
+          volumeMounts:
+            - name: app-uploads
+              mountPath: /corewar-back-app/uploads
+      volumes:
+        - name: app-uploads
+          persistentVolumeClaim:
+            claimName: app-uploads
 
 ---
 # create back-app service

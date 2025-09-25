@@ -68,8 +68,5 @@ const logout = generateFetchApi<void, void>('/auth/logout', {
 export const useLogout = () => {
 	return useMutation({
 		mutationFn: () => logout(),
-		onSuccess: () => {
-			window.location.href = '/'
-		},
 	})
 }

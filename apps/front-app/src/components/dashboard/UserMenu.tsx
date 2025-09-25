@@ -84,7 +84,7 @@ function UserMenu() {
 
 	const handleLogout = useCallback(() => {
 		logoutMutate(
-			{},
+			void 0,
 			{
 				onSuccess: () => {
 					resetFetchMe()
