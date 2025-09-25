@@ -3,13 +3,58 @@ import Cropper from 'react-easy-crop'
 import useStore from '../../../common/store/store'
 import type { UseFormReturn } from 'react-hook-form'
 import type { UserFormData } from './UserProfile'
-import { Dialog } from '@mui/material'
+import { Button, Dialog, styled } from '@mui/material'
+import { defineI18n, useTranslate } from '../../../common/utils/i18n'
+
+const i18n = defineI18n({
+	en: {
+		cancel: 'Cancel',
+		validate: 'Validate',
+	},
+	fr: {
+		cancel: 'Annuler',
+		validate: 'Valider',
+	},
+})
+
+const Container = styled('div')({
+	display: 'flex',
+	flexDirection: 'row',
+	alignItems: 'center',
+	gap: 10,
+})
+
+const DialogContainer = styled('div')({
+	position: 'relative',
+	background: '#333',
+	display: 'flex',
+	flexDirection: 'column',
+	alignItems: 'center',
+	justifyContent: 'center',
+	gap: 10,
+	padding: 20,
+	height: 400,
+})
+
+const CropperContainer = styled('div')({
+	position: 'relative',
+	width: '100%',
+	height: 300,
+})
+
+const ButtonsContainer = styled('div')({
+	display: 'flex',
+	justifyContent: 'space-between',
+	width: '100%',
+	marginTop: 10,
+})
 
 interface ProfilePictureUploaderProps {
 	methods: UseFormReturn<UserFormData, any, UserFormData>
 }
 
 function ProfilePictureUploader({ methods }: ProfilePictureUploaderProps) {
+	const translate = useTranslate()
 	const { user } = useStore()
 
 	const [cropDialogOpen, setCropDialogOpen] = useState(false)
@@ -86,7 +131,7 @@ function ProfilePictureUploader({ methods }: ProfilePictureUploaderProps) {
 
 	return (
 		<>
-			<div>
+			<Container>
 				<canvas
 					ref={canvasRef}
 					width={100}
@@ -99,33 +144,15 @@ function ProfilePictureUploader({ methods }: ProfilePictureUploaderProps) {
 					onChange={handleFileChange}
 					style={{ display: 'block', marginTop: 10 }}
 				/>
-			</div>
+			</Container>
 			<Dialog
 				open={cropDialogOpen}
 				onClose={() => setCropDialogOpen(false)}
 				maxWidth="sm"
 				fullWidth
 			>
-				<div
-					style={{
-						position: 'relative',
-						background: '#333',
-						display: 'flex',
-						flexDirection: 'column',
-						alignItems: 'center',
-						justifyContent: 'center',
-						gap: 10,
-						padding: 20,
-						height: 400,
-					}}
-				>
-					<div
-						style={{
-							position: 'relative',
-							width: '100%',
-							height: 300,
-						}}
-					>
+				<DialogContainer>
+					<CropperContainer>
 						<Cropper
 							image={imageSrc}
 							crop={crop}
@@ -135,22 +162,20 @@ function ProfilePictureUploader({ methods }: ProfilePictureUploaderProps) {
 							onZoomChange={setZoom}
 							onCropComplete={onCropComplete}
 						/>
-					</div>
-					<button
-						type="button"
-						className="px-3 py-1 bg-gray-300 rounded"
-						onClick={() => setCropDialogOpen(false)}
-					>
-						Annuler
-					</button>
-					<button
-						type="button"
-						className="px-3 py-1 bg-blue-500 text-white rounded"
-						onClick={validateCrop}
-					>
-						Valider
-					</button>
-				</div>
+					</CropperContainer>
+					<ButtonsContainer>
+						<Button
+							onClick={() => setCropDialogOpen(false)}
+							color="secondary"
+							variant="contained"
+						>
+							{translate(i18n.cancel)}
+						</Button>
+						<Button onClick={validateCrop} variant="contained">
+							{translate(i18n.validate)}
+						</Button>
+					</ButtonsContainer>
+				</DialogContainer>
 			</Dialog>
 		</>
 	)
