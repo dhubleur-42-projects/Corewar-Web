@@ -44,6 +44,8 @@ RUN apk add --no-cache openssl libc6-compat \
 
 COPY --from=build --chown=app:app /prod/back-app ./
 
+RUN mkdir -p /corewar-back-app/uploads && chown -R app:app /corewar-back-app
+
 USER app
 EXPOSE 3000
 
