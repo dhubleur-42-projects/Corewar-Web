@@ -61,8 +61,8 @@ const connection: RedisOptions = {
 		secret: config.jwtSecret,
 		sign: {
 			algorithm: 'HS256',
-			iss: config.jwtIssuer,
-			aud: config.jwtIssuer,
+			iss: config.selfUrl,
+			aud: config.selfUrl,
 		},
 	})
 	getLogger().debug('Registered JWT plugin')
@@ -112,11 +112,11 @@ const connection: RedisOptions = {
 		signOptions: {
 			privateKeyValidityTime: config.privateKeyValidityTime,
 			publicKeyValidityTime: config.privateKeyValidityTime * 2,
-			issuer: config.jwtIssuer,
+			issuer: config.selfUrl,
 		},
 		verifyOptions: {
 			authorizedIssuers: config.authorizedIssuers,
-			selfAudience: config.jwtIssuer,
+			selfAudience: config.selfUrl,
 		},
 	})
 	getLogger().debug('Registered JWKS plugin')
@@ -124,7 +124,9 @@ const connection: RedisOptions = {
 	await app.register(jwksRoutes)
 	getLogger().debug('Registered JWKS routes')
 
-	await app.register(fastifyMultipart)
+	await app.register(fastifyMultipart, {
+		limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+	})
 	getLogger().debug('Registered Multipart plugin')
 
 	await app.register(authRoutes, { prefix: '/auth' })

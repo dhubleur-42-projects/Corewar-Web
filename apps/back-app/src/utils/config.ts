@@ -21,7 +21,7 @@ const config = {
 		.default('http://localhost:8080')
 		.asString(),
 	jwtSecret: envValues.get('JWT_SECRET').asString(),
-	jwtIssuer: envValues.get('JWT_ISSUER').asString(),
+	selfUrl: envValues.get('SELF_URL').asString(),
 	accessTokenValidity: envValues
 		.get('ACCESS_TOKEN_VALIDITY_SEC')
 		.default('3600') // 1 hour
@@ -64,6 +64,7 @@ const config = {
 		.default('3600000') // 1 hour
 		.asNumber(),
 	execUrl: envValues.get('EXEC_URL').asString(),
+	uploadDir: envValues.get('UPLOAD_DIR').asString(),
 }
 
 export default config

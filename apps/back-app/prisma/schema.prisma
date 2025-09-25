@@ -15,6 +15,7 @@ model User {
   role              UserRole @default(USER)
   locale            Locale   @default(EN)
   profilePictureUrl String
+  profilePictureId  String?
 
   RememberMe RememberMe[]
 }
