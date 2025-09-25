@@ -105,3 +105,18 @@ spec:
       targetPort: 6379
   type: ClusterIP
   clusterIP: None
+
+---
+# create app upload pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-uploads
+  namespace: corewar-mr-{{MR_ID}}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 512Mi
+  storageClassName: longhorn-no-replica

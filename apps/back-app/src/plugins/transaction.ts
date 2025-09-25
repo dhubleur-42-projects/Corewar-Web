@@ -7,7 +7,7 @@ export type TransactionClient = Omit<
 	'$connect' | '$disconnect' | '$on' | '$use' | '$extends' | '$transaction'
 >
 
-type TransactionRequest = FastifyRequest & {
+export type TransactionRequest = FastifyRequest & {
 	transaction: TransactionClient
 }
 

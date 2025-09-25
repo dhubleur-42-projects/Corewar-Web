@@ -28,7 +28,7 @@ function Login() {
 	const navigate = useNavigate()
 	const translate = useTranslate()
 
-	const { user, isUserFromCache, setUser } = useStore()
+	const { user, isUserFromCache, setUser, setLocale } = useStore()
 
 	useEffect(() => {
 		if (user != null && !isUserFromCache) {
@@ -41,9 +41,10 @@ function Login() {
 	useEffect(() => {
 		if (fetchMeSuccess) {
 			setUser(fetchMeData.user)
+			setLocale(fetchMeData.user.locale as 'en' | 'fr')
 			navigate('/dashboard/home', { replace: true })
 		}
-	}, [fetchMeSuccess, fetchMeData, setUser, navigate])
+	}, [fetchMeSuccess, fetchMeData, setUser, setLocale, navigate])
 
 	const { isSuccess: authLinkSuccess, data: authLinkData } =
 		useFetchAuthLink()

@@ -21,6 +21,10 @@ const handleError = (error: unknown) => {
 		return
 	}
 
+	if (error instanceof HttpError && error.isTreated()) {
+		return
+	}
+
 	if (error instanceof HttpError && error.getError() != null) {
 		toast.error(error.getError())
 		return
@@ -49,23 +53,22 @@ queryClient.getMutationCache().subscribe((event) => {
 	}
 })
 
-const fetchApi = (url: string, options?: RequestInit) => {
+const fetchApi = (url: string, options?: RequestInit, contentType?: string) => {
 	return fetch(`${config.apiUrl}${url}`, {
 		credentials: 'include',
 		headers:
-			options?.body != null
+			options?.body != null && contentType != 'multipart/form-data'
 				? {
-						'Content-Type': 'application/json',
+						'Content-Type': contentType ?? 'application/json',
 					}
 				: {},
 		...options,
 	})
 }
 
-type FetchApiOptions = RequestInit | ((...args: any[]) => RequestInit)
-
-class HttpError extends Error {
+export class HttpError extends Error {
 	private error?: string
+	private treated = false
 	constructor(
 		public status: number,
 		message: string,
@@ -79,17 +82,32 @@ class HttpError extends Error {
 	getError() {
 		return this.error
 	}
+
+	isTreated() {
+		return this.treated
+	}
+
+	setTreated() {
+		this.treated = true
+	}
 }
 
-export const generateFetchApi = <Args extends any[], T>(
-	url: string,
-	options?: FetchApiOptions,
-): ((...args: Args) => Promise<T>) => {
-	return async (...args: Args): Promise<T> => {
-		const requestOptions =
-			typeof options === 'function' ? options(...args) : options
+type FetchApiOptions<TVariables> =
+	| RequestInit
+	| ((variables: TVariables) => RequestInit)
 
-		const response = await fetchApi(url, requestOptions)
+export const generateFetchApi = <TVariables = void, TResponse = unknown>(
+	url: string,
+	options?: FetchApiOptions<TVariables>,
+	contentType?: string,
+): ((
+	variables: TVariables extends void ? void : TVariables,
+) => Promise<TResponse>) => {
+	return async (variables: any): Promise<TResponse> => {
+		const requestOptions =
+			typeof options === 'function' ? options(variables) : options
+
+		const response = await fetchApi(url, requestOptions, contentType)
 		if (!response.ok) {
 			throw new HttpError(
 				response.status,
@@ -101,6 +119,6 @@ export const generateFetchApi = <Args extends any[], T>(
 					: undefined,
 			)
 		}
-		return response.json() as Promise<T>
+		return response.json() as Promise<TResponse>
 	}
 }

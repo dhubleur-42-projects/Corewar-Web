@@ -53,7 +53,7 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: longhorn
+  storageClassName: longhorn-2replicas
 
 ---
 # create redis pvc
@@ -68,6 +68,22 @@ spec:
   resources:
     requests:
       storage: 1Gi
+  storageClassName: longhorn-2replicas
+
+---
+# create app upload pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-uploads
+  namespace: corewar-prod
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  storageClassName: longhorn-2replicas
 
 ---
 # create postgres deployment
@@ -289,6 +305,10 @@ spec:
       labels:
         app: back-app
     spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       imagePullSecrets:
         - name: ozyria-registry-secret
       containers:
@@ -306,6 +326,13 @@ spec:
               port: 3000
             initialDelaySeconds: 2
             periodSeconds: 5
+          volumeMounts:
+            - name: app-uploads
+              mountPath: /corewar-back-app/uploads
+      volumes:
+        - name: app-uploads
+          persistentVolumeClaim:
+            claimName: app-uploads
 
 ---
 # create back-app service

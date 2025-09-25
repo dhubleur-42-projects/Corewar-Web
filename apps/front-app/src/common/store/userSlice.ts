@@ -2,9 +2,16 @@ import { type StateCreator } from 'zustand'
 
 const cachedUsedKey = 'cachedUser'
 
+export enum UserRole {
+	USER = 'USER',
+	ADMIN = 'ADMIN',
+}
+
 interface User {
 	id: string
 	username: string
+	role: UserRole
+	profilePictureUrl: string
 }
 
 interface UserState {

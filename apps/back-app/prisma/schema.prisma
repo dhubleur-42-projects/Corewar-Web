@@ -9,11 +9,25 @@ datasource db {
 }
 
 model User {
-  id       String @id @default(cuid())
-  remoteId Int    @unique
-  username String @unique
+  id                String   @id @default(cuid())
+  remoteId          Int      @unique
+  username          String   @unique
+  role              UserRole @default(USER)
+  locale            Locale   @default(EN)
+  profilePictureUrl String
+  profilePictureId  String?
 
   RememberMe RememberMe[]
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum Locale {
+  EN
+  FR
 }
 
 model RememberMe {
