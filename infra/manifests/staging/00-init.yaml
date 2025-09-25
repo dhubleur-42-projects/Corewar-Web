@@ -17,6 +17,21 @@ data:
   tls.key: <base64-encoded-key>
 ---
 
+# create app upload pvc
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-uploads
+  namespace: corewar-staging
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1G
+  storageClassName: longhorn-no-replica
+---
+
 # create docker registry secret
 apiVersion: v1
 kind: Secret
@@ -231,6 +246,13 @@ spec:
               port: 3000
             initialDelaySeconds: 2
             periodSeconds: 5
+          volumeMounts:
+            - name: app-uploads
+              mountPath: /corewar-back-app/uploads
+      volumes:
+        - name: app-uploads
+          persistentVolumeClaim:
+            claimName: app-uploads
 
 ---
 # create back-app service
