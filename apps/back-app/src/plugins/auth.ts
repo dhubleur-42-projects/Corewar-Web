@@ -28,8 +28,8 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 				const payload = fastify.jwt.verify<{
 					userId: string
 				}>(accessToken, {
-					allowedIss: config.jwtIssuer,
-					allowedAud: config.jwtIssuer,
+					allowedIss: config.selfUrl,
+					allowedAud: config.selfUrl,
 				})
 
 				if (!payload.userId) {
@@ -56,8 +56,8 @@ const authPlugin: FastifyPluginAsync = async (fastify) => {
 				const payload = fastify.jwt.verify<{
 					rememberMeId: string
 				}>(rememberMeToken, {
-					allowedIss: config.jwtIssuer,
-					allowedAud: config.jwtIssuer,
+					allowedIss: config.selfUrl,
+					allowedAud: config.selfUrl,
 				})
 
 				if (!payload.rememberMeId) {
