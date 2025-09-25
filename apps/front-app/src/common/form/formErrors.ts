@@ -29,7 +29,7 @@ const formErrorI18n = defineI18n({
 			'Ce champ est trop long (le maximum est de {max} caractères)',
 		[FormErrorType.Pattern]: 'Le format de ce champ est invalide',
 		[FormErrorType.AlreadyUsed]: 'Cette valeur est déjà utilisée',
-		[FormErrorType.InvalidFile]: "Type de fichier invalide",
+		[FormErrorType.InvalidFile]: 'Type de fichier invalide',
 		unkown: 'Erreur inconnue',
 	},
 })

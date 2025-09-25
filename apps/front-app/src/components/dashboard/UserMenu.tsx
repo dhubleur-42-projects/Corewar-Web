@@ -83,16 +83,13 @@ function UserMenu() {
 	const resetFetchMe = useResetFetchMe()
 
 	const handleLogout = useCallback(() => {
-		logoutMutate(
-			void 0,
-			{
-				onSuccess: () => {
-					resetFetchMe()
-					setUser(null)
-					navigate('/', { replace: true })
-				},
+		logoutMutate(void 0, {
+			onSuccess: () => {
+				resetFetchMe()
+				setUser(null)
+				navigate('/', { replace: true })
 			},
-		)
+		})
 	}, [logoutMutate, setUser, navigate, resetFetchMe])
 
 	const [languageMenuAnchorEl, setLanguageMenuAnchorEl] =
