@@ -100,6 +100,7 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
 	fastify.securePost('/profile', {
 		handler: fastify.withTransaction(async (request, reply) => {
 			const parts = request.parts()
+			const userId = request.userId!
 
 			let username: string | null = null
 			let profilePictureFile: Buffer | null = null
@@ -121,6 +122,7 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
 					username = String(part.value)
 				}
 			}
+
 			if (username == null) {
 				return reply.status(400).send({ error: 'Username is required' })
 			}
@@ -129,12 +131,23 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
 					.status(400)
 					.send({ error: 'Invalid username length' })
 			}
+			const isUsedUsername =
+				(await request.transaction.user.findUnique({
+					where: { username, NOT: { id: userId } },
+				})) != null
+
+			if (isUsedUsername) {
+				return reply
+					.status(400)
+					.send({ error: 'USERNAME_ALREADY_USED' })
+			}
+
 			if (profilePictureFile != null) {
 				const imageUrl = await handleProfilePictureUpload(
 					profilePictureFile,
 					profilePictureFilename!,
 					profilePictureMimeType!,
-					request.userId!,
+					userId,
 					request,
 				)
 				if (imageUrl == null) {
@@ -142,19 +155,6 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
 						.status(400)
 						.send({ error: 'Invalid profile picture' })
 				}
-			}
-
-			const userId = request.userId!
-
-			const isUsedUsername =
-				(await request.transaction.user.findUnique({
-					where: { username },
-				})) != null
-
-			if (isUsedUsername) {
-				return reply
-					.status(400)
-					.send({ error: 'USERNAME_ALREADY_USED' })
 			}
 
 			const newUser = await request.transaction.user.update({

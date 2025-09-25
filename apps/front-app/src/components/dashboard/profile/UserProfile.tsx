@@ -110,10 +110,6 @@ function UserProfile() {
 	})
 
 	const onSubmit: SubmitHandler<UserFormData> = (data) => {
-		if (data.username === user!.username) {
-			methods.setError('username', { type: 'alreadyUsed' })
-			return
-		}
 		updateUserProfile(data)
 	}
 
