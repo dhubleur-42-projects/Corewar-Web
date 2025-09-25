@@ -102,6 +102,13 @@ function UserProfile() {
 				error.setTreated()
 				methods.setError('username', { type: 'alreadyUsed' })
 			}
+			if (
+				error instanceof HttpError &&
+				error.getError() === 'INVALID_FILE_TYPE'
+			) {
+				error.setTreated()
+				methods.setError('profilePicture', { type: 'invalidFile' })
+			}
 		},
 		onSuccess: (data) => {
 			setUser(data.user)

@@ -153,7 +153,7 @@ const userRoutes: FastifyPluginAsync = async (fastify) => {
 				if (imageUrl == null) {
 					return reply
 						.status(400)
-						.send({ error: 'Invalid profile picture' })
+						.send({ error: 'INVALID_FILE_TYPE' })
 				}
 			}
 

@@ -6,6 +6,7 @@ enum FormErrorType {
 	MaxLength = 'maxLength',
 	Pattern = 'pattern',
 	AlreadyUsed = 'alreadyUsed',
+	InvalidFile = 'invalidFile',
 }
 
 const formErrorI18n = defineI18n({
@@ -17,6 +18,7 @@ const formErrorI18n = defineI18n({
 			'This field is too long (maximum is {max} characters)',
 		[FormErrorType.Pattern]: 'This field format is invalid',
 		[FormErrorType.AlreadyUsed]: 'This value is already used',
+		[FormErrorType.InvalidFile]: 'Invalid file type',
 		unkown: 'Unknown error',
 	},
 	fr: {
@@ -27,6 +29,7 @@ const formErrorI18n = defineI18n({
 			'Ce champ est trop long (le maximum est de {max} caractères)',
 		[FormErrorType.Pattern]: 'Le format de ce champ est invalide',
 		[FormErrorType.AlreadyUsed]: 'Cette valeur est déjà utilisée',
+		[FormErrorType.InvalidFile]: "Type de fichier invalide",
 		unkown: 'Erreur inconnue',
 	},
 })
