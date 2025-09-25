@@ -305,6 +305,10 @@ spec:
       labels:
         app: back-app
     spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
       imagePullSecrets:
         - name: ozyria-registry-secret
       containers:
