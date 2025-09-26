@@ -7,9 +7,11 @@ concurrency:
     group: ${{ github.workflow }}
 
 jobs:
-    release:
-        name: Release to production
-        runs-on: ubuntu-24.04
+    values:
+        name: Set up release values
+        runs-on: ubuntu-latest
+        outputs:
+            next_version: ${{ steps.next_version.outputs.next_version }}
         steps:
             - name: Checkout repo
               uses: actions/checkout@v4
@@ -45,6 +47,9 @@ jobs:
                   HAS_MINOR=0
                   HAS_PATCH=0
                   while read -r line; do
+                    if [ -z "$line" ]; then
+                      continue
+                    fi
                     if [[ "$line" == *"BREAKING CHANGE"* ]] || [[ "$line" == *"!:"* ]]; then
                       HAS_MAJOR=1
                     elif [[ "$line" == feat* ]] || [[ "$line" == chore* ]] || [[ "$line" == perf* ]]; then
@@ -76,79 +81,27 @@ jobs:
               env:
                   LAST_TAG: ${{ steps.last_release.outputs.last_tag }}
 
-            - name: Create GitHub release
-              uses: actions/create-release@v1
-              with:
-                  tag_name: v${{ steps.next_version.outputs.next_version }}
-                  release_name: Release v${{ steps.next_version.outputs.next_version }}
-                  draft: false
-                  prerelease: false
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    build:
+        name: Build and push images
+        needs: values
+        uses: ./.github/workflows/build-images.yaml
+        with:
+            buildArgs: |
+                ENVIRONMENT=prod
+            tags: |
+                release-latest
+                release-${{ needs.values.outputs.next_version }}
+        secrets:
+            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+            DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
-            - name: Log in to Docker Registry
-              uses: docker/login-action@v3
-              with:
-                  registry: registry.ozyria.fr
-                  username: ${{ secrets.DOCKER_USERNAME }}
-                  password: ${{ secrets.DOCKER_PASSWORD }}
-
-            - name: Build and push back-app image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: back-app
-                  platforms: linux/amd64
-                  build-args: |
-                      ENVIRONMENT=prod
-                  tags: |
-                      registry.ozyria.fr/corewar/back-app:release-latest
-                      registry.ozyria.fr/corewar/back-app:release-${{ steps.next_version.outputs.next_version }}
-
-            - name: Build and push migration job image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: migrate
-                  platforms: linux/amd64
-                  build-args: |
-                      ENVIRONMENT=prod
-                  tags: |
-                      registry.ozyria.fr/corewar/migrate-job:release-latest
-                      registry.ozyria.fr/corewar/migrate-job:release-${{ steps.next_version.outputs.next_version }}
-
-            - name: Build and push exec-app image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: exec-app
-                  platforms: linux/amd64
-                  build-args: |
-                      ENVIRONMENT=prod
-                  tags: |
-                      registry.ozyria.fr/corewar/exec-app:release-latest
-                      registry.ozyria.fr/corewar/exec-app:release-${{ steps.next_version.outputs.next_version }}
-
-            - name: Build and push front-app image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: front-app
-                  platforms: linux/amd64
-                  build-args: |
-                      ENVIRONMENT=prod
-                  tags: |
-                      registry.ozyria.fr/corewar/front-app:release-latest
-                      registry.ozyria.fr/corewar/front-app:release-${{ steps.next_version.outputs.next_version }}
-
+    deploy:
+        name: Deploy to production
+        needs:
+            - build
+            - values
+        runs-on: ubuntu-24.04
+        steps:
             - name: Install OpenVPN
               run: |
                   sudo apt-get update
@@ -170,7 +123,7 @@ jobs:
 
             - name: Deploy
               run: |
-                  ./infra/deploy_prod.sh ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ steps.next_version.outputs.next_version }}
+                  ./infra/deploy_prod.sh ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ needs.values.outputs.next_version }}
 
             - name: Disconnect VPN
               run: |
@@ -179,12 +132,29 @@ jobs:
             - name: Send Discord notification
               run: |
                   curl -H "Content-Type: application/json" \
-                      -d "{\"content\": \"🚀 **PROD** Deployment Info\n\nVersion \`${{ steps.next_version.outputs.next_version }}\` has been deployed to the **production environment**.\n\n- Frontend: \`https://corewar.ozyria.fr\`\n- Backend: \`https://corewar-api.ozyria.fr\`\n- Exec API: \`https://corewar-exec.ozyria.fr\`\"}" \
+                      -d "{\"content\": \"🚀 **PROD** Deployment Info\n\nVersion \`${{ needs.values.outputs.next_version }}\` has been deployed to the **production environment**.\n\n- Frontend: \`https://corewar.ozyria.fr\`\n- Backend: \`https://corewar-api.ozyria.fr\`\n- Exec API: \`https://corewar-exec.ozyria.fr\`\"}" \
                       ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+    release-to-github:
+        name: Create GitHub release
+        needs:
+            - deploy
+            - values
+        runs-on: ubuntu-latest
+        steps:
+            - name: Create GitHub release
+              uses: actions/create-release@v1
+              with:
+                  tag_name: v${{ needs.values.outputs.next_version }}
+                  release_name: Release v${{ needs.values.outputs.next_version }}
+                  draft: false
+                  prerelease: false
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     clean-old-images:
         name: Clean old release images
-        needs: release
+        needs: build
         uses: ./.github/workflows/clean-old-images.yaml
         with:
             tagPrefix: release-

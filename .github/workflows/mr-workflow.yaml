@@ -1,9 +1,5 @@
 name: MR workflow
 
-env:
-    PNPM_VERSION: '10.12.4'
-    NODE_VERSION: '23'
-
 on:
     pull_request:
         types: [opened, synchronize, reopened, closed]
@@ -13,95 +9,52 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
+    update:
+        if: ${{ github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.action == 'reopened' }}
+        name: Update MR workflow entry point
+        runs-on: ubuntu-latest
+        steps:
+            - name: Inform
+              run: echo "Starting MR update workflow for MR ${{ github.event.pull_request.number }}"
+
+    values:
+        name: Set up MR values
+        needs: update
+        runs-on: ubuntu-latest
+        outputs:
+            sha_short: ${{ steps.set-values.outputs.sha_short }}
+        steps:
+            - name: Set up MR values
+              id: set-values
+              run: |
+                  echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
     lint:
         name: Lint
-        if: ${{ github.event.action == 'opened' || github.event.action == 'synchronize' || github.event.action == 'reopened' }}
+        needs: update
         uses: ./.github/workflows/lint.yaml
 
     build:
-        name: Build apps
-        needs: lint
-
-        runs-on: ubuntu-24.04
-
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-
-            - name: Log in to Docker Registry
-              uses: docker/login-action@v3
-              with:
-                  registry: registry.ozyria.fr
-                  username: ${{ secrets.DOCKER_USERNAME }}
-                  password: ${{ secrets.DOCKER_PASSWORD }}
-
-            - name: Compute short SHA
-              id: vars
-              run: echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
-
-            - name: Build and push back-app image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: back-app
-                  platforms: linux/amd64
-                  build-args: |
-                      MR_ID=${{ github.event.pull_request.number }}
-                      ENVIRONMENT=mr
-                  tags: |
-                      registry.ozyria.fr/corewar/back-app:mr-${{ github.event.pull_request.number }}-latest
-                      registry.ozyria.fr/corewar/back-app:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
-
-            - name: Build and push migration job image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: migrate
-                  platforms: linux/amd64
-                  build-args: |
-                      MR_ID=${{ github.event.pull_request.number }}
-                      ENVIRONMENT=mr
-                  tags: |
-                      registry.ozyria.fr/corewar/migrate-job:mr-${{ github.event.pull_request.number }}-latest
-                      registry.ozyria.fr/corewar/migrate-job:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
-
-            - name: Build and push exec-app image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: exec-app
-                  platforms: linux/amd64
-                  build-args: |
-                      MR_ID=${{ github.event.pull_request.number }}
-                      ENVIRONMENT=mr
-                  tags: |
-                      registry.ozyria.fr/corewar/exec-app:mr-${{ github.event.pull_request.number }}-latest
-                      registry.ozyria.fr/corewar/exec-app:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
-
-            - name: Build and push front-app image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: front-app
-                  platforms: linux/amd64
-                  build-args: |
-                      MR_ID=${{ github.event.pull_request.number }}
-                      ENVIRONMENT=mr
-                  tags: |
-                      registry.ozyria.fr/corewar/front-app:mr-${{ github.event.pull_request.number }}-latest
-                      registry.ozyria.fr/corewar/front-app:mr-${{ github.event.pull_request.number }}-${{ steps.vars.outputs.sha_short }}
+        name: Build and push images
+        needs:
+            - lint
+            - values
+        uses: ./.github/workflows/build-images.yaml
+        with:
+            buildArgs: |
+                MR_ID=${{ github.event.pull_request.number }}
+                ENVIRONMENT=mr
+            tags: |
+                mr-${{ github.event.pull_request.number }}-latest
+                mr-${{ github.event.pull_request.number }}-${{ needs.values.outputs.sha_short }}
+        secrets:
+            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+            DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
     deploy:
         name: Deploy to Kubernetes
-        needs: build
+        needs:
+            - build
+            - values
         runs-on: ubuntu-24.04
         steps:
             - name: Install OpenVPN
@@ -118,10 +71,6 @@ jobs:
                   mkdir -p ~/.kube
                   echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
 
-            - name: Compute short SHA
-              id: vars
-              run: echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
-
             - name: Checkout
               uses: actions/checkout@v4
 
@@ -132,7 +81,7 @@ jobs:
 
             - name: Deploy
               run: |
-                  ./infra/deploy_mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ secrets.TLS_CERT }} ${{ secrets.TLS_KEY }} ${{ steps.vars.outputs.sha_short }} ${{ secrets.DOCKER_USERNAME }} ${{ secrets.DOCKER_PASSWORD }}
+                  ./infra/deploy_mr.sh ${{ github.event.pull_request.number }} ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ secrets.TLS_CERT }} ${{ secrets.TLS_KEY }} ${{ needs.values.outputs.sha_short }} ${{ secrets.DOCKER_USERNAME }} ${{ secrets.DOCKER_PASSWORD }}
 
             - name: Disconnect VPN
               run: |
@@ -164,9 +113,17 @@ jobs:
             DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
             DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
+    delete:
+        if: ${{ github.event.action == 'closed' }}
+        name: Delete MR workflow entry point
+        runs-on: ubuntu-latest
+        steps:
+            - name: Inform
+              run: echo "Starting MR delete workflow for MR ${{ github.event.pull_request.number }}"
+
     delete-mr-environment:
         name: Delete MR environment
-        if: ${{ github.event.action == 'closed' }}
+        needs: delete
 
         runs-on: ubuntu-24.04
 

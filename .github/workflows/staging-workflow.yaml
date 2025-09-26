@@ -1,9 +1,5 @@
 name: Staging workflow
 
-env:
-    PNPM_VERSION: '10.12.4'
-    NODE_VERSION: '23'
-
 on:
     push:
         branches:
@@ -14,90 +10,43 @@ concurrency:
     cancel-in-progress: true
 
 jobs:
+    values:
+        name: Set up staging values
+        runs-on: ubuntu-latest
+        outputs:
+            sha_short: ${{ steps.set-values.outputs.sha_short }}
+        steps:
+            - name: Set up staging values
+              id: set-values
+              run: |
+                  echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
     lint:
         name: Lint
         uses: ./.github/workflows/lint.yaml
 
     build:
         name: Build apps
-        needs: lint
+        needs:
+            - lint
+            - values
 
-        runs-on: ubuntu-24.04
-
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
-
-            - name: Log in to Docker Registry
-              uses: docker/login-action@v3
-              with:
-                  registry: registry.ozyria.fr
-                  username: ${{ secrets.DOCKER_USERNAME }}
-                  password: ${{ secrets.DOCKER_PASSWORD }}
-
-            - name: Compute short SHA
-              id: vars
-              run: echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
-
-            - name: Build and push back-app image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: back-app
-                  platforms: linux/amd64
-                  build-args: |
-                      ENVIRONMENT=staging
-                  tags: |
-                      registry.ozyria.fr/corewar/back-app:staging-latest
-                      registry.ozyria.fr/corewar/back-app:staging-${{ steps.vars.outputs.sha_short }}
-
-            - name: Build and push migration job image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: migrate
-                  platforms: linux/amd64
-                  build-args: |
-                      ENVIRONMENT=staging
-                  tags: |
-                      registry.ozyria.fr/corewar/migrate-job:staging-latest
-                      registry.ozyria.fr/corewar/migrate-job:staging-${{ steps.vars.outputs.sha_short }}
-
-            - name: Build and push exec-app image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: exec-app
-                  platforms: linux/amd64
-                  build-args: |
-                      ENVIRONMENT=staging
-                  tags: |
-                      registry.ozyria.fr/corewar/exec-app:staging-latest
-                      registry.ozyria.fr/corewar/exec-app:staging-${{ steps.vars.outputs.sha_short }}
-
-            - name: Build and push front-app image
-              uses: docker/build-push-action@v6
-              with:
-                  context: ./
-                  file: ./Dockerfile
-                  push: true
-                  target: front-app
-                  platforms: linux/amd64
-                  build-args: |
-                      ENVIRONMENT=staging
-                  tags: |
-                      registry.ozyria.fr/corewar/front-app:staging-latest
-                      registry.ozyria.fr/corewar/front-app:staging-${{ steps.vars.outputs.sha_short }}
+        uses: ./.github/workflows/build-images.yaml
+        with:
+            buildArgs: |
+                ENVIRONMENT=staging
+            tags: |
+                staging-latest
+                staging-${{ needs.values.outputs.sha_short }}
+        secrets:
+            DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+            DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
     deploy:
         name: Deploy to Kubernetes
-        needs: build
+        needs:
+            - build
+            - values
         runs-on: ubuntu-24.04
         steps:
             - name: Install OpenVPN
@@ -117,10 +66,6 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
 
-            - name: Compute short SHA
-              id: vars
-              run: echo "sha_short=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
-
             - name: Start OpenVPN
               run: |
                   sudo openvpn --config /tmp/ci.ovpn --daemon
@@ -128,7 +73,7 @@ jobs:
 
             - name: Deploy
               run: |
-                  ./infra/deploy_staging.sh ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ steps.vars.outputs.sha_short }}
+                  ./infra/deploy_staging.sh ${{ secrets.API_CLIENT_ID }} ${{ secrets.API_CLIENT_SECRET }} ${{ needs.values.outputs.sha_short }}
 
             - name: Disconnect VPN
               run: |
@@ -136,16 +81,15 @@ jobs:
 
     comment-discord:
         name: Notify Discord with deployment info
-        needs: deploy
+        needs:
+            - deploy
+            - values
         runs-on: ubuntu-24.04
         steps:
-            - name: Set short commit SHA
-              run: echo "COMMIT_SHA=${GITHUB_SHA::7}" >> $GITHUB_ENV
-
             - name: Send Discord notification
               run: |
                   curl -H "Content-Type: application/json" \
-                      -d "{\"content\": \"🚀 Deployment Info\n\nCommit \`${COMMIT_SHA}\` has been deployed to the **staging environment**.\n\n- Frontend: \`https://staging-corewar.ozyria.fr\`\n- Backend: \`https://staging-corewar-api.ozyria.fr\`\n- Exec API: \`https://staging-corewar-exec.ozyria.fr\`\n\n> Note: This environment is for testing purposes only.\"}" \
+                      -d "{\"content\": \"🚀 Deployment Info\n\nCommit \`${{ needs.values.outputs.sha_short }}\` has been deployed to the **staging environment**.\n\n- Frontend: \`https://staging-corewar.ozyria.fr\`\n- Backend: \`https://staging-corewar-api.ozyria.fr\`\n- Exec API: \`https://staging-corewar-exec.ozyria.fr\`\n\n> Note: This environment is for testing purposes only.\"}" \
                       ${{ secrets.DISCORD_WEBHOOK_URL }}
 
     clean-old-images:
