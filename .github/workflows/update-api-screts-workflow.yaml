@@ -1,0 +1,64 @@
+name: 'Hotix API credentials (update repo secrets before)'
+
+on:
+    workflow_dispatch:
+        inputs:
+            namespace:
+                description: 'K8S namespace (corewar-prod, corewar-staging, corewar-mr-X)'
+                required: true
+                type: string
+
+jobs:
+    verify-namespace:
+        runs-on: ubuntu-latest
+        steps:
+            - id: check
+              run: |
+                  if [[ "${{ github.event.inputs.namespace }}" =~ ^corewar-(prod|staging|mr-[0-9]+)$ ]]; then
+                      exit 0
+                  else
+                      echo "Invalid namespace"
+                      exit 1
+                  fi
+
+    update-configmap:
+        needs: verify-namespace
+        runs-on: ubuntu-latest
+        steps:
+            - name: Install OpenVPN
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y openvpn openvpn-systemd-resolved
+
+            - name: Set up OpenVPN config
+              run: |
+                  echo "${{ secrets.OVPN_CONFIG_DATA }}" | base64 -d > /tmp/ci.ovpn
+
+            - name: Set up kubeconfig
+              run: |
+                  mkdir -p ~/.kube
+                  echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
+
+            - name: Start OpenVPN
+              run: |
+                  sudo openvpn --config /tmp/ci.ovpn --daemon
+                  sleep 10
+
+            - name: Update ConfigMap
+              run: |
+                  NS="${{ github.event.inputs.namespace }}"
+                  CM_NAME="back-app-config"
+
+                  kubectl patch configmap $CM_NAME -n "$NS" \
+                    --type merge \
+                    -p "{\"data\": {\"API_CLIENT_ID\": \"${{ secrets.API_CLIENT_ID }}\", \"API_CLIENT_SECRET\": \"${{ secrets.API_CLIENT_SECRET }}\"}}"
+
+            - name: Rollout back-app
+              run: |
+                  NS="${{ github.event.inputs.namespace }}"
+                  kubectl rollout restart deployment back-app -n "$NS"
+                  kubectl rollout status deployment/back-app -n "$NS" --timeout=180s
+
+            - name: Disconnect VPN
+              run: |
+                  sudo killall openvpn || true
