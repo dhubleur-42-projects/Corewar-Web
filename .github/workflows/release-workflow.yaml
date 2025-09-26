@@ -116,6 +116,9 @@ jobs:
                   mkdir -p ~/.kube
                   echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
 
+            - name: Checkout
+              uses: actions/checkout@v4
+
             - name: Start OpenVPN
               run: |
                   sudo openvpn --config /tmp/ci.ovpn --daemon
