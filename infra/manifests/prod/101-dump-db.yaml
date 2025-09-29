@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+    name: db-dump
+    namespace: corewar-prod
+spec:
+    backoffLimit: 2
+    template:
+        metadata:
+            labels:
+                job-name: db-dump
+        spec:
+            imagePullSecrets:
+                - name: ozyria-registry-secret
+            restartPolicy: Never
+            containers:
+                - name: dump
+                  image: registry.ozyria.fr/corewar/dump-db:latest
+                  imagePullPolicy: Always
+                  envFrom:
+                      - configMapRef:
+                            name: dump-db-config
