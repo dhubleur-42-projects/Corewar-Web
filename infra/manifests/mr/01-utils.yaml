@@ -6,8 +6,8 @@ metadata:
   namespace: corewar-mr-{{MR_ID}}
 type: kubernetes.io/tls
 data:
-  tls.crt: {{BASE64_ENCODED_CERT}}
-  tls.key: {{BASE64_ENCODED_KEY}}
+  tls.crt: { { BASE64_ENCODED_CERT } }
+  tls.key: { { BASE64_ENCODED_KEY } }
 
 ---
 # create postgres deployment
@@ -26,9 +26,12 @@ spec:
       labels:
         app: postgres
     spec:
+      imagePullSecrets:
+        - name: ozyria-registry-secret
       containers:
         - name: postgres
-          image: postgres:13
+          image: registry.ozyria.fr/corewar/filled-db:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 5432
           env:
@@ -58,7 +61,7 @@ spec:
       targetPort: 5432
   type: ClusterIP
   clusterIP: None
-  
+
 ---
 # create redis deployment
 apiVersion: apps/v1
@@ -87,7 +90,7 @@ spec:
                 secretKeyRef:
                   name: data-credentials
                   key: redis-password
-          args: ["--requirepass", "{{REDIS_PASSWORD}}"]
+          args: ['--requirepass', '{{REDIS_PASSWORD}}']
 
 ---
 # create redis service
