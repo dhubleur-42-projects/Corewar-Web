@@ -1,0 +1,101 @@
+name: 'Reset dev database'
+
+on:
+    workflow_dispatch:
+        inputs:
+            namespace:
+                description: 'K8S namespace (corewar-staging, corewar-mr-X)'
+                required: true
+                type: string
+    workflow_call:
+        inputs:
+            namespace:
+                description: 'K8S namespace (corewar-staging, corewar-mr-X)'
+                required: true
+                type: string
+    pull_request:
+        types: [opened, synchronize, reopened]
+
+jobs:
+    get-input:
+        runs-on: ubuntu-latest
+        outputs:
+            namespace: ${{ steps.set-namespace.outputs.namespace }}
+        steps:
+            - id: set-namespace
+              run: |
+                  if [ -n "${{ github.event.inputs.namespace }}" ]; then
+                    NS="${{ github.event.inputs.namespace }}"
+                  elif [ -n "${{ github.event.workflow_call.inputs.namespace }}" ]; then
+                    NS="${{ github.event.workflow_call.inputs.namespace }}"
+                  elif [ -n "${{ github.event.pull_request.number }}" ]; then
+                    NS="corewar-mr-${{ github.event.pull_request.number }}"
+                  else
+                    NS="default-namespace"
+                  fi
+                  echo "namespace=$NS" >> $GITHUB_OUTPUT
+
+    verify-namespace:
+        needs: get-input
+        runs-on: ubuntu-latest
+        steps:
+            - id: check
+              run: |
+                  if [[ "${{ needs.get-input.outputs.namespace }}" =~ ^corewar-(staging|mr-[0-9]+)$ ]]; then
+                      exit 0
+                  else
+                      echo "Invalid namespace"
+                      exit 1
+                  fi
+
+    reset-db:
+        needs:
+            - get-input
+            - verify-namespace
+        runs-on: ubuntu-latest
+        steps:
+            - name: Install OpenVPN
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y openvpn openvpn-systemd-resolved
+
+            - name: Set up OpenVPN config
+              run: |
+                  echo "${{ secrets.OVPN_CONFIG_DATA }}" | base64 -d > /tmp/ci.ovpn
+
+            - name: Set up kubeconfig
+              run: |
+                  mkdir -p ~/.kube
+                  echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
+
+            - name: Start OpenVPN
+              run: |
+                  sudo openvpn --config /tmp/ci.ovpn --daemon
+                  sleep 10
+
+            - name: Rollout database
+              run: |
+                  NS="${{ needs.get-input.outputs.namespace }}"
+                  kubectl rollout restart deployment postgres -n "$NS"
+                  kubectl rollout status deployment/postgres -n "$NS" --timeout=180s
+
+            - name: Rerun migration job
+              run: |
+                  NS="${{ needs.get-input.outputs.namespace }}"
+                  JOB_NAME="db-migration-$(date +%s)"
+                  kubectl create job "$JOB_NAME" --from=job/db-migration -n "$NS"
+                  kubectl wait --for=condition=complete job/"$JOB_NAME" -n "$NS" --timeout=300s
+                  echo ====== Migration job logs ======
+                  kubectl logs job/"$JOB_NAME" -n "$NS"
+                  echo ================================
+                  kubectl delete job "$JOB_NAME" -n "$NS"
+
+            - name: Rollout back-app
+              run: |
+                  NS="${{ needs.get-input.outputs.namespace }}"
+                  kubectl rollout restart deployment back-app -n "$NS"
+                  kubectl rollout status deployment/back-app -n "$NS" --timeout=180s
+
+            - name: Disconnect VPN
+              run: |
+                  sudo killall openvpn || true
