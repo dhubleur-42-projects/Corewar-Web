@@ -22,7 +22,7 @@ on:
                 description: 'Base64 encoded OpenVPN config file'
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.event.inputs.namespace || github.event.workflow_call.inputs.namespace }}
+    group: ${{ github.workflow }}-${{ github.event.inputs.namespace || inputs.namespace }}
 
 jobs:
     get-input:
@@ -34,8 +34,8 @@ jobs:
               run: |
                   if [ -n "${{ github.event.inputs.namespace }}" ]; then
                     NS="${{ github.event.inputs.namespace }}"
-                  elif [ -n "${{ github.event.workflow_call.inputs.namespace }}" ]; then
-                    NS="${{ github.event.workflow_call.inputs.namespace }}"
+                  elif [ -n "${{ inputs.namespace }}" ]; then
+                    NS="${{ inputs.namespace }}"
                   else
                     echo "No namespace provided"
                     exit 1
