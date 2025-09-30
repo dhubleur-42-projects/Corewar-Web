@@ -13,8 +13,18 @@ on:
                 description: 'K8S namespace (corewar-staging, corewar-mr-X)'
                 required: true
                 type: string
+        secrets:
+            KUBE_CONFIG_DATA:
+                required: true
+                description: 'Base64 encoded kubeconfig file'
+            OVPN_CONFIG_DATA:
+                required: true
+                description: 'Base64 encoded OpenVPN config file'
     pull_request:
         types: [opened, synchronize, reopened]
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.inputs.namespace || github.event.workflow_call.inputs.namespace || github.event.pull_request.number }}
 
 jobs:
     get-input:
