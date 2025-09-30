@@ -20,11 +20,9 @@ on:
             OVPN_CONFIG_DATA:
                 required: true
                 description: 'Base64 encoded OpenVPN config file'
-    pull_request:
-        types: [opened, synchronize, reopened]
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.event.inputs.namespace || github.event.workflow_call.inputs.namespace || github.event.pull_request.number }}
+    group: ${{ github.workflow }}-${{ github.event.inputs.namespace || github.event.workflow_call.inputs.namespace }}
 
 jobs:
     get-input:
@@ -38,10 +36,9 @@ jobs:
                     NS="${{ github.event.inputs.namespace }}"
                   elif [ -n "${{ github.event.workflow_call.inputs.namespace }}" ]; then
                     NS="${{ github.event.workflow_call.inputs.namespace }}"
-                  elif [ -n "${{ github.event.pull_request.number }}" ]; then
-                    NS="corewar-mr-${{ github.event.pull_request.number }}"
                   else
-                    NS="default-namespace"
+                    echo "No namespace provided"
+                    exit 1
                   fi
                   echo "namespace=$NS" >> $GITHUB_OUTPUT
 
