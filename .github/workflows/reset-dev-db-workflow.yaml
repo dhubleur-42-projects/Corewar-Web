@@ -92,13 +92,27 @@ jobs:
             - name: Rerun migration job
               run: |
                   NS="${{ needs.get-input.outputs.namespace }}"
-                  JOB_NAME="db-migration-$(date +%s)"
-                  kubectl create job "$JOB_NAME" --from=job/db-migration -n "$NS"
-                  kubectl wait --for=condition=complete job/"$JOB_NAME" -n "$NS" --timeout=300s
+                  JOB_YAML=$(kubectl get job db-migration -n "$NS" -o yaml)
+                  JOB_YAML_CLEAN=$(echo "$JOB_YAML" \
+                    | yq eval 'del(
+                        .metadata.uid,
+                        .metadata.resourceVersion,
+                        .metadata.generation,
+                        .metadata.creationTimestamp,
+                        .metadata.managedFields,
+                        .status,
+                        .spec.selector,
+                        .spec.template.metadata.creationTimestamp,
+                        .spec.template.metadata.labels["controller-uid"],
+                        .spec.template.metadata.labels["job-name"],
+                        .spec.template.metadata.labels["batch.kubernetes.io/controller-uid"]
+                      )' -)
+                  kubectl delete job db-migration -n "$NS" --ignore-not-found
+                  echo "$JOB_YAML_CLEAN" | kubectl apply -n "$NS" -f -
+                  kubectl wait --for=condition=complete job/db-migration -n "$NS" --timeout=300s
                   echo ====== Migration job logs ======
-                  kubectl logs job/"$JOB_NAME" -n "$NS"
+                  kubectl logs job/db-migration -n "$NS"
                   echo ================================
-                  kubectl delete job "$JOB_NAME" -n "$NS"
 
             - name: Rollout back-app
               run: |
