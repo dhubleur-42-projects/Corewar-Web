@@ -1,0 +1,122 @@
+name: 'Reset dev database'
+
+on:
+    workflow_dispatch:
+        inputs:
+            namespace:
+                description: 'K8S namespace (corewar-staging, corewar-mr-X)'
+                required: true
+                type: string
+    workflow_call:
+        inputs:
+            namespace:
+                description: 'K8S namespace (corewar-staging, corewar-mr-X)'
+                required: true
+                type: string
+        secrets:
+            KUBE_CONFIG_DATA:
+                required: true
+                description: 'Base64 encoded kubeconfig file'
+            OVPN_CONFIG_DATA:
+                required: true
+                description: 'Base64 encoded OpenVPN config file'
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.event.inputs.namespace || inputs.namespace }}
+
+jobs:
+    get-input:
+        runs-on: ubuntu-latest
+        outputs:
+            namespace: ${{ steps.set-namespace.outputs.namespace }}
+        steps:
+            - id: set-namespace
+              run: |
+                  if [ -n "${{ github.event.inputs.namespace }}" ]; then
+                    NS="${{ github.event.inputs.namespace }}"
+                  elif [ -n "${{ inputs.namespace }}" ]; then
+                    NS="${{ inputs.namespace }}"
+                  else
+                    echo "No namespace provided"
+                    exit 1
+                  fi
+                  echo "namespace=$NS" >> $GITHUB_OUTPUT
+
+    verify-namespace:
+        needs: get-input
+        runs-on: ubuntu-latest
+        steps:
+            - id: check
+              run: |
+                  if [[ "${{ needs.get-input.outputs.namespace }}" =~ ^corewar-(staging|mr-[0-9]+)$ ]]; then
+                      exit 0
+                  else
+                      echo "Invalid namespace"
+                      exit 1
+                  fi
+
+    reset-db:
+        needs:
+            - get-input
+            - verify-namespace
+        runs-on: ubuntu-latest
+        steps:
+            - name: Install OpenVPN
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y openvpn openvpn-systemd-resolved
+
+            - name: Set up OpenVPN config
+              run: |
+                  echo "${{ secrets.OVPN_CONFIG_DATA }}" | base64 -d > /tmp/ci.ovpn
+
+            - name: Set up kubeconfig
+              run: |
+                  mkdir -p ~/.kube
+                  echo ${{ secrets.KUBE_CONFIG_DATA }} | base64 -d > ~/.kube/config
+
+            - name: Start OpenVPN
+              run: |
+                  sudo openvpn --config /tmp/ci.ovpn --daemon
+                  sleep 10
+
+            - name: Rollout database
+              run: |
+                  NS="${{ needs.get-input.outputs.namespace }}"
+                  kubectl rollout restart deployment postgres -n "$NS"
+                  kubectl rollout status deployment/postgres -n "$NS" --timeout=180s
+
+            - name: Rerun migration job
+              run: |
+                  NS="${{ needs.get-input.outputs.namespace }}"
+                  JOB_YAML=$(kubectl get job db-migration -n "$NS" -o yaml)
+                  JOB_YAML_CLEAN=$(echo "$JOB_YAML" \
+                    | yq eval 'del(
+                        .metadata.uid,
+                        .metadata.resourceVersion,
+                        .metadata.generation,
+                        .metadata.creationTimestamp,
+                        .metadata.managedFields,
+                        .status,
+                        .spec.selector,
+                        .spec.template.metadata.creationTimestamp,
+                        .spec.template.metadata.labels["controller-uid"],
+                        .spec.template.metadata.labels["job-name"],
+                        .spec.template.metadata.labels["batch.kubernetes.io/controller-uid"]
+                      )' -)
+                  kubectl delete job db-migration -n "$NS" --ignore-not-found
+                  echo "$JOB_YAML_CLEAN" | kubectl apply -n "$NS" -f -
+                  kubectl wait --for=condition=complete job/db-migration -n "$NS" --timeout=300s
+                  echo ====== Migration job logs ======
+                  kubectl logs job/db-migration -n "$NS"
+                  echo ================================
+
+            - name: Rollout back-app
+              run: |
+                  NS="${{ needs.get-input.outputs.namespace }}"
+                  kubectl rollout restart deployment back-app -n "$NS"
+                  kubectl rollout status deployment/back-app -n "$NS" --timeout=180s
+
+            - name: Disconnect VPN
+              run: |
+                  sudo killall openvpn || true
